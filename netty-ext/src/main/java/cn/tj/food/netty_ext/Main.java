@@ -1,4 +1,4 @@
-package cn.tj.food;
+package cn.tj.food.netty_ext;
 
 public class Main {
     public static void main(String[] args) {

@@ -1,0 +1,151 @@
+import cn.tj.food.monkey.Lexer;
+import cn.tj.food.monkey.Parser;
+import cn.tj.food.monkey.model.Element;
+import cn.tj.food.monkey.model.Environment;
+import cn.tj.food.monkey.model.Evaluator;
+import cn.tj.food.monkey.model.Program;
+import org.junit.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+public class EvaluatorTest {
+    @Test
+    public void testEvalIntegerExpression() throws Exception {
+        StringBuilder sb = new StringBuilder();
+//        sb.append("5").append("\n");
+//        sb.append("5+7").append("\n");
+//        sb.append("5-9").append("\n");
+//        sb.append("-5+13").append("\n");
+//        sb.append("-5++19").append("\n");
+//        sb.append("-5+(+19)").append("\n");
+//        sb.append("9>5").append("\n");
+//        sb.append("3<9").append("\n");
+//        sb.append("3+6>9+15").append("\n");
+//        sb.append("5+2==1+6").append("\n");
+        sb.append("9+3!=10+2").append("\n");
+        Lexer lexer = new Lexer(sb.toString());
+        Parser parser = new Parser(lexer);
+        Program program = parser.parseProgram();
+        Evaluator evaluator = new Evaluator();
+        Environment env = new Environment();
+        Element result = evaluator.eval(program, env);
+        System.out.println(result.inspect());
+    }
+
+    @Test
+    public void testEvalBooleanExpression() throws Exception {
+        StringBuilder sb = new StringBuilder();
+//        sb.append("true").append("\n");
+//        sb.append("false").append("\n");
+//        sb.append("true==false").append("\n");
+//        sb.append("true!=false").append("\n");
+//        sb.append("(5>2)==true").append("\n");
+//        sb.append("(6>15)!=(2<5)").append("\n");
+        sb.append("(9-5)==(2<5)").append("\n");
+        Lexer lexer = new Lexer(sb.toString());
+        Parser parser = new Parser(lexer);
+        Program program = parser.parseProgram();
+        Evaluator evaluator = new Evaluator();
+        Environment env = new Environment();
+        Element result = evaluator.eval(program, env);
+        System.out.println(result.inspect());
+    }
+
+    @Test
+    public void testBangOperator() throws Exception {
+        StringBuilder sb = new StringBuilder();
+//        sb.append("-10").append("\n");
+//        sb.append("+10").append("\n");
+//        sb.append("-true").append("\n");
+        sb.append("+false").append("\n");
+//        sb.append("!true").append("\n");
+//        sb.append("!10").append("\n");
+//        sb.append("!name").append("\n");
+//        sb.append("!-10").append("\n");
+//        sb.append("!-false").append("\n");
+        Lexer lexer = new Lexer(sb.toString());
+        Parser parser = new Parser(lexer);
+        Program program = parser.parseProgram();
+        Evaluator evaluator = new Evaluator();
+        Environment env = new Environment();
+        Element result = evaluator.eval(program, env);
+        System.out.println(result.inspect());
+    }
+
+    @Test
+    public void testIfElseStatement() throws Exception {
+        StringBuilder sb = new StringBuilder();
+//        sb.append("if(true) {10}").append("\n");
+//        sb.append("if(1) {10}").append("\n");
+//        sb.append("if(1>2) {10}").append("\n");
+//        sb.append("if(1<2) {10}").append("\n");
+        sb.append("if(1>2) {10} else {20}").append("\n");
+        Lexer lexer = new Lexer(sb.toString());
+        Parser parser = new Parser(lexer);
+        Program program = parser.parseProgram();
+        Evaluator evaluator = new Evaluator();
+        Environment env = new Environment();
+        Element result = evaluator.eval(program, env);
+        System.out.println(result.inspect());
+    }
+
+    @Test
+    public void testReturnStatement() throws Exception {
+        StringBuilder sb = new StringBuilder();
+//        sb.append("return 15;").append("\n");
+//        sb.append("6; return 15; return 99;").append("\n");
+//        sb.append("if(10 > 1) {if(9>5) {return 7;} return 5;}").append("\n");
+//        sb.append("6; return 2*9; 15;").append("\n");
+        sb.append("return 6; return 2*9; 15;").append("\n");
+        Lexer lexer = new Lexer(sb.toString());
+        Parser parser = new Parser(lexer);
+        Program program = parser.parseProgram();
+        Evaluator evaluator = new Evaluator();
+        Environment env = new Environment();
+        Element result = evaluator.eval(program, env);
+        System.out.println(result.inspect());
+    }
+
+    @Test
+    public void testLetStatement() throws Exception {
+        StringBuilder sb = new StringBuilder();
+//        sb.append("let a = 5;").append("\n");
+//        sb.append("a;").append("\n");
+//        sb.append("a + 2;").append("\n");
+        sb.append("let add = fn(x) { x+2 };").append("\n");
+        sb.append("add;").append("\n");
+        Lexer lexer = new Lexer(sb.toString());
+        Parser parser = new Parser(lexer);
+        Program program = parser.parseProgram();
+        Evaluator evaluator = new Evaluator();
+        Environment env = new Environment();
+        Element result = evaluator.eval(program, env);
+        System.out.println(result.inspect());
+    }
+
+    @Test
+    public void testCallStatement() throws Exception {
+        StringBuilder sb = new StringBuilder();
+//        sb.append("let add = fn(x) { x+2 };").append("\n");
+//        sb.append("add(3);").append("\n");
+//        sb.append("fn(x){x>10} (3);").append("\n");
+//        sb.append("let add = fn(x) { if(x>10){99}else{-1} };").append("\n");
+//        sb.append("add(3);").append("\n");
+//        sb.append("fn(x) { if(x>10){99}else{-1} } (3);").append("\n");
+        sb.append("let adder = fn(x) { fn(y){x+y;} };").append("\n");
+        sb.append("let add = adder(2);").append("\n");
+        sb.append("add(3);").append("\n");
+//        sb.append("let add = fn(a,b) { a+b };").append("\n");
+//        sb.append("let sub = fn(a,b) { a-b };").append("\n");
+//        sb.append("let applyFunc = fn(a,b,func) { func(a,b); };").append("\n");
+//        sb.append("applyFunc(2,5,add);").append("\n");
+//        sb.append("applyFunc(2,5,sub);").append("\n");
+        Lexer lexer = new Lexer(sb.toString());
+        Parser parser = new Parser(lexer);
+        Program program = parser.parseProgram();
+        Evaluator evaluator = new Evaluator();
+        Environment env = new Environment();
+        Element result = evaluator.eval(program, env);
+        System.out.println(result.inspect());
+    }
+}

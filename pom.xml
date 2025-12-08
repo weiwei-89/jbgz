@@ -11,6 +11,7 @@
         <module>common</module>
         <module>netty-ext</module>
         <module>onion</module>
+        <module>monkey</module>
     </modules>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -41,8 +42,9 @@
             <properties>
                 <config>dev</config>
                 <commonEnv>common</commonEnv>
-                <nettyExt>netty-ext</nettyExt>
-                <onion>onion</onion>
+                <nettyExtEnv>netty-ext</nettyExtEnv>
+                <onionEnv>onion</onionEnv>
+                <monkeyEnv>monkey</monkeyEnv>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -53,8 +55,9 @@
             <properties>
                 <config>test</config>
                 <commonEnv>common</commonEnv>
-                <nettyExt>netty-ext</nettyExt>
-                <onion>onion</onion>
+                <nettyExtEnv>netty-ext</nettyExtEnv>
+                <onionEnv>onion</onionEnv>
+                <monkeyEnv>monkey</monkeyEnv>
             </properties>
         </profile>
     </profiles>

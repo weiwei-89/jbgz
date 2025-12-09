@@ -13,6 +13,7 @@
         <module>onion</module>
         <module>monkey</module>
         <module>sauce</module>
+        <module>garlic</module>
     </modules>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -47,6 +48,7 @@
                 <onionEnv>onion</onionEnv>
                 <monkeyEnv>monkey</monkeyEnv>
                 <sauceEnv>sauce</sauceEnv>
+                <garlicEnv>garlic</garlicEnv>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -61,6 +63,7 @@
                 <onionEnv>onion</onionEnv>
                 <monkeyEnv>monkey</monkeyEnv>
                 <sauceEnv>sauce</sauceEnv>
+                <garlicEnv>garlic</garlicEnv>
             </properties>
         </profile>
     </profiles>

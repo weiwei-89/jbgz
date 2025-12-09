@@ -12,6 +12,7 @@
         <module>netty-ext</module>
         <module>onion</module>
         <module>monkey</module>
+        <module>sauce</module>
     </modules>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -45,6 +46,7 @@
                 <nettyExtEnv>netty-ext</nettyExtEnv>
                 <onionEnv>onion</onionEnv>
                 <monkeyEnv>monkey</monkeyEnv>
+                <sauceEnv>sauce</sauceEnv>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -58,6 +60,7 @@
                 <nettyExtEnv>netty-ext</nettyExtEnv>
                 <onionEnv>onion</onionEnv>
                 <monkeyEnv>monkey</monkeyEnv>
+                <sauceEnv>sauce</sauceEnv>
             </properties>
         </profile>
     </profiles>

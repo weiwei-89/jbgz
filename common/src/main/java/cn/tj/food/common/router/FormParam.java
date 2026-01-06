@@ -5,6 +5,6 @@ import java.lang.annotation.*;
 @Documented
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JsonParam {
+public @interface FormParam {
 
 }

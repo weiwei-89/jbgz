@@ -11,6 +11,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.util.AttributeKey;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,21 +30,23 @@ public class HttpServerTest {
         Config config = new Config();
         config.setPort(listenPort);
         StatusHandler statusHandler = new StatusHandler();
-        ApiLoader apiLoader = new ApiLoader("org.edward.pandora.test.controller");
+        ApiLoader apiLoader = new ApiLoader("cn.tj.food.test.controller");
         apiLoader.init();
         Server server = new Server(config);
-        server.setInitializer(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline()
-                        .addLast(statusHandler)
-                        .addLast(new HttpServerCodec())
-                        .addLast(new HttpObjectAggregator(1024*1024))
-                        .addLast(new HttpJsonHandler())
-                        .addLast(new HttpDispatchHandler(apiLoader))
-                        .addLast(new HttpResponseHandler());
-            }
-        });
+        server.setInitializer(
+                new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ch.pipeline()
+                                .addLast(statusHandler)
+                                .addLast(new HttpServerCodec())
+                                .addLast(new HttpObjectAggregator(1024*1024))
+//                                .addLast(new ChunkedWriteHandler())
+                                .addLast("HttpDispatchHandler", new HttpDispatchHandler(apiLoader))
+                                .addLast(new HttpResponseHandler());
+                    }
+                }
+        );
         server.startup();
     }
 }

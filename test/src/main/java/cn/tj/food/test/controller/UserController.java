@@ -62,6 +62,36 @@ public class UserController {
     public Connector download1(String token, @FormParam ApiParam param) throws Exception {
         logger.info("token: {}", token);
         logger.info("param[file_id]: {}", param.getString("file_id", ""));
-        return new Connector().setParam(param);
+        return new Connector()
+                .setParam(param);
+    }
+
+    @Path("/download2")
+    public Connector download2(String token, @FormParam ApiParam param) throws Exception {
+        logger.info("token: {}", token);
+        logger.info("param[file_id]: {}", param.getString("file_id", ""));
+        return new Connector()
+                .setTransferMode(Connector.TRANSFER_MODE.ZERO_COPY)
+                .setParam(param);
+    }
+
+    @Path("/preview1")
+    public Connector preview1(String token, @FormParam ApiParam param) throws Exception {
+        logger.info("token: {}", token);
+        logger.info("param[file_id]: {}", param.getString("file_id", ""));
+        return new Connector()
+                .setTransferMode(Connector.TRANSFER_MODE.COMMON)
+                .setDownloadMode(Connector.DOWNLOAD_MODE.PREVIEW)
+                .setParam(param);
+    }
+
+    @Path("/preview2")
+    public Connector preview2(String token, @FormParam ApiParam param) throws Exception {
+        logger.info("token: {}", token);
+        logger.info("param[file_id]: {}", param.getString("file_id", ""));
+        return new Connector()
+                .setTransferMode(Connector.TRANSFER_MODE.ZERO_COPY)
+                .setDownloadMode(Connector.DOWNLOAD_MODE.PREVIEW)
+                .setParam(param);
     }
 }

@@ -5,8 +5,6 @@ import cn.tj.food.netty_ext.Connector;
 import io.netty.channel.*;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.*;
-import io.netty.handler.stream.ChunkedFile;
-import io.netty.handler.stream.ChunkedWriteHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,14 +13,12 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.util.List;
 
-public class HttpDownloadHandler extends MessageToMessageDecoder<Connector> {
-    private static final Logger logger = LoggerFactory.getLogger(HttpDownloadHandler.class);
+public class HttpZeroCopyDownloadHandler extends MessageToMessageDecoder<Connector> {
+    private static final Logger logger = LoggerFactory.getLogger(HttpZeroCopyDownloadHandler.class);
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        logger.info("HttpDownloadHandler added");
-        ctx.pipeline()
-                .addBefore("HttpDownloadHandler", "ChunkedWriteHandler", new ChunkedWriteHandler());
+        logger.info("HttpZeroCopyDownloadHandler added");
     }
 
     @Override
@@ -39,17 +35,17 @@ public class HttpDownloadHandler extends MessageToMessageDecoder<Connector> {
             httpResponse.headers()
                     .set(HttpHeaderNames.CONTENT_TYPE, mimeType)
                     .set(HttpHeaderNames.CONTENT_DISPOSITION, String.format("%s;%s=\"%s\"", "inline", HttpHeaderValues.FILENAME, "haha.jpg"))
-                    .set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+                    .set(HttpHeaderNames.CONTENT_LENGTH, file.length());
         } else {
             httpResponse.headers()
                     .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM)
                     .set(HttpHeaderNames.CONTENT_DISPOSITION, String.format("%s;%s=\"%s\"", HttpHeaderValues.ATTACHMENT, HttpHeaderValues.FILENAME, "haha.jpg"))
-                    .set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+                    .set(HttpHeaderNames.CONTENT_LENGTH, file.length());
         }
         ctx.write(httpResponse);
         RandomAccessFile raf = new RandomAccessFile(file, "r");
-        ChunkedFile cf = new ChunkedFile(raf, 8192);
-        ChannelFuture future = ctx.write(cf, ctx.newProgressivePromise());
+        FileRegion fr = new DefaultFileRegion(raf.getChannel(), 0, raf.length());
+        ChannelFuture future = ctx.write(fr, ctx.newProgressivePromise());
         future.addListener(new ChannelProgressiveFutureListener() {
             @Override
             public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) throws Exception {
@@ -70,8 +66,7 @@ public class HttpDownloadHandler extends MessageToMessageDecoder<Connector> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.pipeline().remove("ChunkedWriteHandler");
         super.exceptionCaught(ctx, cause);
-        logger.error("HttpDownloadHandler error", cause);
+        logger.error("HttpZeroCopyDownloadHandler error", cause);
     }
 }

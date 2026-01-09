@@ -35,8 +35,14 @@ public class HttpGetHandler extends MessageToMessageDecoder<FullHttpRequest> {
         Object result = this.apiLoader.form(decoder.path(), params);
         logger.info("result: {}", JSON.toJSONString(result));
         if(result instanceof Connector) {
-            ctx.pipeline()
-                    .addAfter("HttpGetHandler", "HttpDownloadHandler", new HttpDownloadHandler());
+            Connector connector = (Connector) result;
+            if(connector.getTransferMode() == Connector.TRANSFER_MODE.COMMON) {
+                ctx.pipeline()
+                        .addAfter("HttpGetHandler", "HttpDownloadHandler", new HttpDownloadHandler());
+            } else if(connector.getTransferMode() == Connector.TRANSFER_MODE.ZERO_COPY) {
+                ctx.pipeline()
+                        .addAfter("HttpGetHandler", "HttpZeroCopyDownloadHandler", new HttpZeroCopyDownloadHandler());
+            }
             out.add(result);
         } else {
             if(result == null) {

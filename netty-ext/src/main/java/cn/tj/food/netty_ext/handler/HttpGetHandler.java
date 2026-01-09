@@ -1,6 +1,7 @@
 package cn.tj.food.netty_ext.handler;
 
 import cn.tj.food.common.router.ApiLoader;
+import cn.tj.food.netty_ext.Connector;
 import com.alibaba.fastjson2.JSON;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -33,10 +34,16 @@ public class HttpGetHandler extends MessageToMessageDecoder<FullHttpRequest> {
         logger.info("params: {}", JSON.toJSONString(params));
         Object result = this.apiLoader.form(decoder.path(), params);
         logger.info("result: {}", JSON.toJSONString(result));
-        if(result == null) {
-            out.add("");
-        } else {
+        if(result instanceof Connector) {
+            ctx.pipeline()
+                    .addAfter("HttpGetHandler", "HttpDownloadHandler", new HttpDownloadHandler());
             out.add(result);
+        } else {
+            if(result == null) {
+                out.add("");
+            } else {
+                out.add(result);
+            }
         }
     }
 

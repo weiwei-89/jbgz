@@ -8,7 +8,15 @@ public class IntervalTask extends CommonTask {
         this.interval = interval;
     }
 
+    public long getInterval() {
+        return this.interval;
+    }
+
     private long lastProcessTime = System.currentTimeMillis();
+
+    public long getLastProcessTime() {
+        return this.lastProcessTime;
+    }
 
     @Override
     protected boolean trigger() {

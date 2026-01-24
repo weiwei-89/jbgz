@@ -50,6 +50,7 @@
                 <monkeyEnv>monkey</monkeyEnv>
                 <sauceEnv>sauce</sauceEnv>
                 <garlicEnv>garlic</garlicEnv>
+                <testEnv>test</testEnv>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -65,6 +66,7 @@
                 <monkeyEnv>monkey</monkeyEnv>
                 <sauceEnv>sauce</sauceEnv>
                 <garlicEnv>garlic</garlicEnv>
+                <testEnv>test</testEnv>
             </properties>
         </profile>
     </profiles>

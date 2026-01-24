@@ -1,6 +1,6 @@
 package cn.tj.food.common.task;
 
-public class GeneralTask extends CommonTask {
+public abstract class GeneralTask extends CommonTask {
     public GeneralTask(Processor processor) {
         super(processor);
     }

@@ -3,7 +3,6 @@ package cn.tj.food.netty_ext.client;
 import cn.tj.food.common.tcp.Config;
 import cn.tj.food.common.tcp.TcpClient;
 import cn.tj.food.netty_ext.codec.encoder.Appender;
-import cn.tj.food.netty_ext.handler.StatusHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -27,7 +26,7 @@ public class Client implements TcpClient<Channel> {
     }
 
     @Override
-    public void shutdown() {
+    public void shutdown() throws Exception {
         this.group.shutdownGracefully();
     }
 
@@ -43,15 +42,7 @@ public class Client implements TcpClient<Channel> {
         this.group = new NioEventLoopGroup();
         ChannelInitializer<? extends SocketChannel> initializer = null;
         if(this.initializer == null) {
-            StatusHandler statusHandler = new StatusHandler();
-            initializer = new ChannelInitializer<SocketChannel>() {
-                @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline()
-                            .addLast(statusHandler)
-                            .addLast(new Appender("\r\n".getBytes()));
-                }
-            };
+            initializer = this.defaultInitializer();
         } else {
             initializer = this.initializer;
         }
@@ -59,6 +50,15 @@ public class Client implements TcpClient<Channel> {
         this.bootstrap.group(this.group)
                 .channel(NioSocketChannel.class)
                 .handler(initializer);
+    }
+
+    private ChannelInitializer<? extends SocketChannel> defaultInitializer() {
+        return new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new Appender("\r\n".getBytes()));
+            }
+        };
     }
 
     public static Client build() {

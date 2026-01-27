@@ -1,9 +1,11 @@
 package cn.tj.food.netty_ext.server;
 
+import cn.tj.food.common.tcp.ServerSession;
+import cn.tj.food.common.tcp.SessionFuture;
 import cn.tj.food.common.tcp.User;
 import io.netty.channel.Channel;
 
-public class Session {
+public class Session implements ServerSession<Channel> {
     private Channel channel;
     private User user;
 
@@ -18,5 +20,25 @@ public class Session {
     }
     public void setUser(User user) {
         this.user = user;
+    }
+
+    @Override
+    public boolean isActive() {
+        return false;
+    }
+
+    @Override
+    public SessionFuture send(String info) throws Exception {
+        return null;
+    }
+
+    @Override
+    public void read(String info) throws Exception {
+
+    }
+
+    @Override
+    public void close() throws Exception {
+
     }
 }

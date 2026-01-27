@@ -39,22 +39,7 @@ public class Server {
         try {
             ChannelInitializer<? extends SocketChannel> initializer = null;
             if(this.initializer == null) {
-                StatusHandler statusHandler = new StatusHandler();
-                initializer = new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline()
-                                .addLast(new IdleHandler(
-                                        config.getReadTimeout(),
-                                        config.getWriteTimeout(),
-                                        config.getReadWriteTimeout(),
-                                        TimeUnit.MILLISECONDS)
-                                )
-                                .addLast(statusHandler)
-                                .addLast(new Heartbeater(100L))
-                                .addLast(new LineBasedFrameDecoder(512));
-                    }
-                };
+                initializer = this.defaultInitializer();
             } else {
                 initializer = this.initializer;
             }
@@ -64,7 +49,7 @@ public class Server {
                     .childHandler(initializer)
                     .bind(this.config.getPort())
                     .sync().channel();
-            logger.info("done");
+            logger.info("completed");
             this.channel.closeFuture().sync();
             logger.info("server stopped [port:{}]", this.config.getPort());
         } finally {
@@ -73,6 +58,27 @@ public class Server {
             childGroup.shutdownGracefully().sync();
             logger.info("done");
         }
+    }
+
+    private ChannelInitializer<? extends SocketChannel> defaultInitializer() {
+        StatusHandler statusHandler = new StatusHandler();
+        return new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline()
+                        .addLast(
+                                new IdleHandler(
+                                    config.getReadTimeout(),
+                                    config.getWriteTimeout(),
+                                    config.getReadWriteTimeout(),
+                                    TimeUnit.MILLISECONDS
+                                )
+                        )
+                        .addLast(statusHandler)
+                        .addLast(new Heartbeater(100L))
+                        .addLast(new LineBasedFrameDecoder(512));
+            }
+        };
     }
 
     public void shutdown() throws Exception {

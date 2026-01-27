@@ -4,12 +4,11 @@ import cn.tj.food.common.DataUtil;
 import cn.tj.food.common.task.*;
 import cn.tj.food.common.tcp.*;
 import cn.tj.food.netty_ext.client.Client;
-import cn.tj.food.netty_ext.client.Session;
 import cn.tj.food.netty_ext.handler.Heartbeater;
 import cn.tj.food.netty_ext.handler.IdleHandler;
 import cn.tj.food.netty_ext.handler.StatusHandler;
 import cn.tj.food.netty_ext.server.Server;
-import cn.tj.food.netty_ext.server.SessionManager;
+import cn.tj.food.netty_ext.server.Session;
 import cn.tj.food.netty_ext.util.ByteBufUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -49,9 +48,26 @@ public class StartupRunner implements ApplicationRunner {
     private static class TcpServerProcessor implements Processor {
         private static final Logger logger = LoggerFactory.getLogger(TcpServerProcessor.class);
 
+        private final ServerSessionManager<User, Channel, Session> sessionManager = new ServerSessionManager<User, Channel, Session>() {
+            @Override
+            protected String generateId(Config config, User user) {
+                return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
+            }
+        };
+
+        private Config tcpConfig;
+        private User user;
+
         @Override
         public void init() throws Exception {
-
+            Config config = new Config();
+            config.setHost("localhost");
+            config.setPort(8090);
+            this.tcpConfig = config;
+            User user = new User();
+            user.setName("edward");
+            user.setPassword("123456");
+            this.user = user;
         }
 
         @Override
@@ -60,51 +76,56 @@ public class StartupRunner implements ApplicationRunner {
             config.setPort(8090);
             StatusHandler statusHandler = new StatusHandler();
             Server server = new Server(config);
-            server.setInitializer(new ChannelInitializer<SocketChannel>() {
-                @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline()
-                            .addLast(new IdleHandler(
-                                    100000L,
-                                    0,
-                                    0,
-                                    TimeUnit.MILLISECONDS)
-                            )
-                            .addLast(statusHandler)
-                            .addLast(new Heartbeater(100L))
-                            .addLast(new LineBasedFrameDecoder(512))
-                            .addLast(new ChannelInboundHandlerAdapter() {
-                                @Override
-                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                                    if(evt instanceof Heartbeater.HeartbeatEvent) {
-//                                        logger.info("tick......");
-                                    }
-                                    super.userEventTriggered(ctx, evt);
-                                }
+            server.setInitializer(
+                    new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel ch) throws Exception {
+                            ch.pipeline()
+                                    .addLast(new IdleHandler(
+                                            100000L,
+                                            0,
+                                            0,
+                                            TimeUnit.MILLISECONDS)
+                                    )
+                                    .addLast(statusHandler)
+                                    .addLast(new Heartbeater(100L))
+                                    .addLast(new LineBasedFrameDecoder(512))
+                                    .addLast(
+                                            new ChannelInboundHandlerAdapter() {
+                                                @Override
+                                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                                                    if(evt instanceof Heartbeater.HeartbeatEvent) {
+//                                                        logger.info("tick......");
+                                                    }
+                                                    super.userEventTriggered(ctx, evt);
+                                                }
 
-                                @Override
-                                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                                    cn.tj.food.netty_ext.server.Session session = new cn.tj.food.netty_ext.server.Session();
-                                    session.setChannel(ctx.channel());
-                                    SessionManager.addSession(session);
-                                    super.channelActive(ctx);
-                                }
+                                                @Override
+                                                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                                    Session session = new Session();
+                                                    session.setChannel(ctx.channel());
+                                                    // TODO 连接断开后清理sessionManager
+                                                    sessionManager.addSession(tcpConfig, user, session);
+                                                    super.channelActive(ctx);
+                                                }
 
-                                @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    try {
-                                        if(msg instanceof ByteBuf) {
-                                            ByteBuf buffer = (ByteBuf) msg;
-                                            logger.info("hex: {}",
-                                                    DataUtil.toHexString(ByteBufUtil.getReadableBytes(buffer)));
-                                        }
-                                    } finally {
-                                        ReferenceCountUtil.release(msg, ReferenceCountUtil.refCnt(msg));
-                                    }
-                                }
-                            });
-                }
-            });
+                                                @Override
+                                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                                    try {
+                                                        if(msg instanceof ByteBuf) {
+                                                            ByteBuf buffer = (ByteBuf) msg;
+                                                            logger.info("hex: {}",
+                                                                    DataUtil.toHexString(ByteBufUtil.getReadableBytes(buffer)));
+                                                        }
+                                                    } finally {
+                                                        ReferenceCountUtil.release(msg, ReferenceCountUtil.refCnt(msg));
+                                                    }
+                                                }
+                                            }
+                                    );
+                        }
+                    }
+            );
             server.startup();
         }
     }
@@ -112,15 +133,24 @@ public class StartupRunner implements ApplicationRunner {
     private static class ScanningProcessor implements Processor {
         private static final Logger logger = LoggerFactory.getLogger(ScanningProcessor.class);
         private static final String APP_BASE_FOLDER_PATH = "D:\\edward\\test\\pandora\\event-bus\\app";
-        private static final Connector<Channel> connector = new Connector<Channel>(Client.build()) {
+        private static final Connector<User, Channel> connector = new Connector<User, Channel>(
+                Client.build(),
+                new ClientSessionManager<User, Channel, ClientCommonSession<Channel>>() {
+                    @Override
+                    protected String generateId(Config config, User user) {
+                        return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
+                    }
+                }
+        ) {
             @Override
-            protected CommonSession<Channel> buildSession(TcpClient<Channel> client, Config config, User user) {
+            protected ClientCommonSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
                 Client client0 = (Client) client;
-                return Session.create(client0.getGroup(), client, config, user);
+                return cn.tj.food.netty_ext.client.Session.create(client0.getGroup(), client);
             }
         };
 
         private Config config;
+        private User user;
 
         @Override
         public void init() throws Exception {
@@ -131,6 +161,7 @@ public class StartupRunner implements ApplicationRunner {
             User user = new User();
             user.setName("edward");
             user.setPassword("123456");
+            this.user = user;
             connector.connect(config, user);
         }
 
@@ -183,7 +214,7 @@ public class StartupRunner implements ApplicationRunner {
         }
 
         private void handleEvent(File file) throws Exception {
-            SessionFuture future = connector.send(this.config, "hello");
+            SessionFuture future = connector.send(this.config, this.user, "hello");
             future.addListener(new FutureListener() {
                 @Override
                 public void onComplete() throws Exception {

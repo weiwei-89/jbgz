@@ -23,6 +23,9 @@ import java.util.concurrent.TimeUnit;
 public class TcpServerTest {
     private static final Logger logger = LoggerFactory.getLogger(TcpServerTest.class);
     private static final String LISTEN_PORT = "listen.port";
+    private static final long READ_TIMEOUT = 10000L;
+    private static final long WRITE_TIMEOUT = 0L;
+    private static final long READ_WRITE_TIMEOUT = 0L;
 
     public static void main(String[] args) throws Exception {
         Options options = new Options();
@@ -34,44 +37,50 @@ public class TcpServerTest {
         config.setPort(listenPort);
         StatusHandler statusHandler = new StatusHandler();
         Server server = new Server(config);
-        server.setInitializer(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline()
-                        .addLast(new IdleHandler(
-                                10000L,
-                                0,
-                                0,
-                                TimeUnit.MILLISECONDS)
-                        )
-                        .addLast(statusHandler)
-                        .addLast(new Heartbeater(100L))
-//                        .addLast(new FrameDecoder(new byte[]{0x3D}, 8))
-                        .addLast(new LineBasedFrameDecoder(512))
-                        .addLast(new ChannelInboundHandlerAdapter() {
-                            @Override
-                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                                if(evt instanceof Heartbeater.HeartbeatEvent) {
-                                    logger.info("tick......");
-                                }
-                                super.userEventTriggered(ctx, evt);
-                            }
+        server.setInitializer(
+                new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ch.pipeline()
+                                .addLast(
+                                        new IdleHandler(
+                                            READ_TIMEOUT,
+                                            WRITE_TIMEOUT,
+                                            READ_WRITE_TIMEOUT,
+                                            TimeUnit.MILLISECONDS
+                                        )
+                                )
+                                .addLast(statusHandler)
+                                .addLast(new Heartbeater(100L))
+        //                        .addLast(new FrameDecoder(new byte[]{0x3D}, 8))
+                                .addLast(new LineBasedFrameDecoder(512))
+                                .addLast(
+                                        new ChannelInboundHandlerAdapter() {
+                                            @Override
+                                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                                                if(evt instanceof Heartbeater.HeartbeatEvent) {
+                                                    logger.info("tick......");
+                                                }
+                                                super.userEventTriggered(ctx, evt);
+                                            }
 
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                try {
-                                    if(msg instanceof ByteBuf) {
-                                        ByteBuf buffer = (ByteBuf) msg;
-                                        logger.info("hex: {}",
-                                                DataUtil.toHexString(ByteBufUtil.getReadableBytes(buffer)));
-                                    }
-                                } finally {
-                                    ReferenceCountUtil.release(msg, ReferenceCountUtil.refCnt(msg));
-                                }
-                            }
-                        });
-            }
-        });
+                                            @Override
+                                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                                try {
+                                                    if(msg instanceof ByteBuf) {
+                                                        ByteBuf buffer = (ByteBuf) msg;
+                                                        logger.info("hex: {}",
+                                                                DataUtil.toHexString(ByteBufUtil.getReadableBytes(buffer)));
+                                                    }
+                                                } finally {
+                                                    ReferenceCountUtil.release(msg, ReferenceCountUtil.refCnt(msg));
+                                                }
+                                            }
+                                        }
+                                );
+                    }
+                }
+        );
         server.startup();
     }
 }

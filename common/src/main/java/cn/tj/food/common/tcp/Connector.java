@@ -3,61 +3,43 @@ package cn.tj.food.common.tcp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public abstract class Connector<C> {
+public abstract class Connector<USER, CNT> {
     private static final Logger logger = LoggerFactory.getLogger(Connector.class);
 
-    private final TcpClient<C> client;
-    private final Map<String, CommonSession<C>> sessions;
+    private final TcpClient<CNT> client;
+    private final ClientSessionManager<USER, CNT, ClientCommonSession<CNT>> sessionManager;
 
-    public Connector(TcpClient<C> client) {
+    public Connector(
+            TcpClient<CNT> client,
+            ClientSessionManager<USER, CNT, ClientCommonSession<CNT>> sessionManager
+    ) {
         this.client = client;
-        this.sessions = new HashMap<>();
+        this.sessionManager = sessionManager;
     }
 
-    protected abstract CommonSession<C> buildSession(TcpClient<C> client, Config config, User user);
+    protected abstract ClientCommonSession<CNT> buildSession(TcpClient<CNT> client) throws Exception;
 
-    private static String generateSessionId(Config config) {
-        return String.format("%s:%d", config.getHost(), config.getPort());
-    }
-
-    public synchronized void connect(Config config, User user) throws Exception {
-        String sessionId = generateSessionId(config);
-        if(this.sessions.containsKey(sessionId)) {
-            return;
-        }
-        CommonSession<C> session = this.buildSession(this.client, config, user);
+    public void connect(Config config, USER user) throws Exception {
+        ClientCommonSession<CNT> session = this.buildSession(this.client);
         try {
             logger.info("current session is inactive, trying to establish(1st)......");
-            session.init();
+            session.init(config);
+            this.sessionManager.addSession(config, user, session);
         } catch(Exception e) {
             logger.error("session establishment(1st) failed", e);
         }
-        this.sessions.put(sessionId, session);
     }
 
-    public SessionFuture send(Config config, String info) throws Exception {
-        String sessionId = generateSessionId(config);
-        if(!this.sessions.containsKey(sessionId)) {
-            throw new Exception("session is not initialized");
-        }
-        CommonSession<C> session = this.sessions.get(sessionId);
-        return session.send(info);
+    public SessionFuture send(Config config, USER user, String info) throws Exception {
+        return this.sessionManager.getSession(config, user).send(info);
     }
 
-    public synchronized void close(Config config) throws Exception {
-        String sessionId = generateSessionId(config);
-        if(!this.sessions.containsKey(sessionId)) {
-            return;
-        }
-        CommonSession<C> session = this.sessions.get(sessionId);
-        session.close();
-        this.sessions.remove(sessionId);
+    public void close(Config config, USER user) throws Exception {
+        this.sessionManager.closeSession(config, user);
     }
 
-    public void shutdown() {
+    // TODO 清理sessionManager
+    public void shutdown() throws Exception {
         logger.info("shutting down connector......");
         if(this.client == null) {
             logger.info("done(not started)");

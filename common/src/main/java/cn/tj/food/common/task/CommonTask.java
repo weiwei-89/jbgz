@@ -12,6 +12,18 @@ public abstract class CommonTask implements Runnable {
         }
     }
 
+    private STATUS status = STATUS.STOPPED;
+
+    public enum STATUS {
+        STOPPED,
+        RUNNING,
+        DONE
+    }
+
+    public STATUS getStatus() {
+        return this.status;
+    }
+
     protected abstract boolean trigger();
 
     protected void done(boolean result) {
@@ -32,7 +44,9 @@ public abstract class CommonTask implements Runnable {
                 if(this.processor == null) {
                     throw new Exception("processor is not set");
                 }
+                this.status = STATUS.RUNNING;
                 this.processor.process();
+                this.status = STATUS.DONE;
                 result = true;
             }
         } catch(Exception e) {

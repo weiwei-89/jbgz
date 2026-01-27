@@ -1,19 +1,20 @@
 package cn.tj.food.netty_ext.handler;
 
 import cn.tj.food.common.router.ApiLoader;
-import cn.tj.food.netty_ext.util.ByteBufUtil;
-import com.alibaba.fastjson2.JSON;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-
-public class HttpDispatchHandler extends MessageToMessageDecoder<FullHttpRequest> {
+public class HttpDispatchHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private static final Logger logger = LoggerFactory.getLogger(HttpDispatchHandler.class);
+
+    public static final AttributeKey<String> CONTEXT_URI = AttributeKey.newInstance("uri");
 
     private final ApiLoader apiLoader;
 
@@ -27,18 +28,53 @@ public class HttpDispatchHandler extends MessageToMessageDecoder<FullHttpRequest
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, FullHttpRequest request, List<Object> out) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         String uri = request.uri();
-        ByteBuf content = request.content();
-        String json = new String(ByteBufUtil.getReadableBytes(content));
-        logger.info("json: {}", json);
-        Object result = this.apiLoader.execute(uri, json);
-        logger.info("result: {}", JSON.toJSONString(result));
-        if(result == null) {
-            out.add("");
-        } else {
-            out.add(result);
+        logger.info("uri: {}", uri);
+        ctx.channel().attr(CONTEXT_URI).set(uri);
+        HttpMethod method = request.method();
+        logger.info("method: {}", method);
+        if(method == HttpMethod.POST) {
+            String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+            if(contentType.startsWith(HttpHeaderValues.APPLICATION_JSON.toString())) {
+                ctx.pipeline()
+                        .addAfter(
+                                "HttpDispatchHandler",
+                                "HttpJsonHandler",
+                                new HttpJsonHandler(this.apiLoader)
+                        );
+                ctx.fireChannelRead(request.retain());
+                return;
+            } else if(contentType.startsWith(HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())) {
+                ctx.pipeline()
+                        .addAfter(
+                                "HttpDispatchHandler",
+                                "HttpFormHandler",
+                                new HttpFormHandler(this.apiLoader)
+                        );
+                ctx.fireChannelRead(request.retain());
+                return;
+            } else if(contentType.startsWith(HttpHeaderValues.MULTIPART_FORM_DATA.toString())) {
+                ctx.pipeline()
+                        .addAfter(
+                                "HttpDispatchHandler",
+                                "HttpMultipartFormHandler",
+                                new HttpMultipartFormHandler(this.apiLoader)
+                        );
+                ctx.fireChannelRead(request.retain());
+                return;
+            }
+        } else if(method == HttpMethod.GET) {
+            ctx.pipeline()
+                    .addAfter(
+                            "HttpDispatchHandler",
+                            "HttpGetHandler",
+                            new HttpGetHandler(this.apiLoader)
+                    );
+            ctx.fireChannelRead(request.retain());
+            return;
         }
+        throw new Exception("request not supported");
     }
 
     @Override

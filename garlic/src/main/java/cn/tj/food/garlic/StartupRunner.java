@@ -41,7 +41,14 @@ public class StartupRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        this.taskPool.addTask("tcp-server", new GeneralTask(new TcpServerProcessor()));
+        this.taskPool.addTask(
+                "tcp-server",
+                new GeneralTask(
+                        new TcpServerProcessor()
+                ) {
+
+                }
+        );
         this.scheduledTaskPool.addTask("scanning", new IntervalTask(new ScanningProcessor(), 5*1000));
     }
 

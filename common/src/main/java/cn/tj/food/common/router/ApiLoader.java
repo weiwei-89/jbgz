@@ -96,7 +96,7 @@ public class ApiLoader {
         return clazz.cast(this.apiFunctionMap.get(path).getEntrance().getInstance());
     }
 
-    public Object execute(String path, String json) throws Exception {
+    public Object json(String path, String json) throws Exception {
         ApiFunction apiFunction = this.apiFunctionMap.get(path);
         if(apiFunction == null) {
             throw new Exception(String.format("uri not found [%s]", path));
@@ -127,42 +127,78 @@ public class ApiLoader {
         return method.invoke(apiFunction.getEntrance().getInstance(), argArray);
     }
 
+    public Object form(String path, Map<String, List<String>> params) throws Exception {
+        ApiFunction apiFunction = this.apiFunctionMap.get(path);
+        if(apiFunction == null) {
+            throw new Exception(String.format("uri not found [%s]", path));
+        }
+        Method method = apiFunction.getInstance();
+        Parameter[] parameters = method.getParameters();
+        if(parameters==null || parameters.length==0) {
+            return method.invoke(apiFunction.getEntrance().getInstance());
+        }
+        Object[] argArray = new Object[parameters.length];
+        for(int i=0; i<parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            if(parameter.isAnnotationPresent(FormParam.class)) {
+                if(params == null) {
+                    argArray[i] = null;
+                    continue;
+                }
+                ApiParam param = new ApiParam();
+                for(Map.Entry<String, List<String>> entry : params.entrySet()) {
+                    List<String> values = entry.getValue();
+                    if(values==null || values.size()==0) {
+                        continue;
+                    }
+                    param.set(entry.getKey(), values.get(0));
+                }
+                argArray[i] = param;
+            } else {
+                argArray[i] = null;
+            }
+        }
+        return method.invoke(apiFunction.getEntrance().getInstance(), argArray);
+    }
+
+    public Object multipartForm(String path, Map<String, Object> params) throws Exception {
+        ApiFunction apiFunction = this.apiFunctionMap.get(path);
+        if(apiFunction == null) {
+            throw new Exception(String.format("uri not found [%s]", path));
+        }
+        Method method = apiFunction.getInstance();
+        Parameter[] parameters = method.getParameters();
+        if(parameters==null || parameters.length==0) {
+            return method.invoke(apiFunction.getEntrance().getInstance());
+        }
+        Object[] argArray = new Object[parameters.length];
+        for(int i=0; i<parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            if(parameter.isAnnotationPresent(FormParam.class)) {
+                if(params == null) {
+                    argArray[i] = null;
+                    continue;
+                }
+                ApiParam param = new ApiParam();
+                for(Map.Entry<String, Object> entry : params.entrySet()) {
+                    Object values = entry.getValue();
+                    if(values == null) {
+                        continue;
+                    }
+                    param.set(entry.getKey(), values);
+                }
+                argArray[i] = param;
+            } else {
+                argArray[i] = null;
+            }
+        }
+        return method.invoke(apiFunction.getEntrance().getInstance(), argArray);
+    }
+
     public static void main(String[] args) throws Exception {
         String path1 = "/api/user/";
         String path2 = "/query/list";
         String uri = generateFullPath(path1, path2);
         System.out.println(uri);
     }
-
-//    public Object execute(String path, Object... args) throws Exception {
-//        ApiFunction apiFunction = this.apiFunctionMap.get(path);
-//        if(apiFunction == null) {
-//            throw new Exception(String.format("uri not found [%s]", path));
-//        }
-//        Method method = apiFunction.getInstance();
-//        Parameter[] parameters = method.getParameters();
-//        if(parameters==null || parameters.length==0) {
-//            return method.invoke(apiFunction.getEntrance().getInstance());
-//        }
-//        Object[] argArray = new Object[parameters.length];
-//        for(int i=0; i<parameters.length; i++) {
-//            Parameter parameter = parameters[i];
-//            Object arg = args[i];
-//            if(parameter.isAnnotationPresent(JsonParam.class)) {
-//                if(arg == null) {
-//                    argArray[i] = null;
-//                    continue;
-//                }
-//                Class<?> parameterType = parameter.getType();
-//                if(parameterType == String.class) {
-//                    argArray[i] = arg;
-//                } else {
-//                    argArray[i] = this.objectMapper.readValue(arg.toString(), parameterType);
-//                }
-//            } else {
-//                argArray[i] = arg;
-//            }
-//        }
-//        return method.invoke(apiFunction.getEntrance().getInstance(), argArray);
-//    }
 }

@@ -2,7 +2,6 @@ package cn.tj.food.test;
 
 import cn.tj.food.common.router.ApiLoader;
 import cn.tj.food.netty_ext.handler.HttpDispatchHandler;
-import cn.tj.food.netty_ext.handler.HttpJsonHandler;
 import cn.tj.food.netty_ext.handler.HttpResponseHandler;
 import cn.tj.food.netty_ext.handler.StatusHandler;
 import cn.tj.food.netty_ext.server.Config;
@@ -28,21 +27,22 @@ public class HttpServerTest {
         Config config = new Config();
         config.setPort(listenPort);
         StatusHandler statusHandler = new StatusHandler();
-        ApiLoader apiLoader = new ApiLoader("org.edward.pandora.test.controller");
+        ApiLoader apiLoader = new ApiLoader("cn.tj.food.test.controller");
         apiLoader.init();
         Server server = new Server(config);
-        server.setInitializer(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline()
-                        .addLast(statusHandler)
-                        .addLast(new HttpServerCodec())
-                        .addLast(new HttpObjectAggregator(1024*1024))
-                        .addLast(new HttpJsonHandler())
-                        .addLast(new HttpDispatchHandler(apiLoader))
-                        .addLast(new HttpResponseHandler());
-            }
-        });
+        server.setInitializer(
+                new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ch.pipeline()
+                                .addLast(statusHandler)
+                                .addLast(new HttpServerCodec())
+                                .addLast(new HttpObjectAggregator(1024*1024))
+                                .addLast("HttpDispatchHandler", new HttpDispatchHandler(apiLoader))
+                                .addLast("HttpResponseHandler", new HttpResponseHandler());
+                    }
+                }
+        );
         server.startup();
     }
 }

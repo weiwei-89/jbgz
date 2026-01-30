@@ -1,7 +1,7 @@
 package cn.tj.food.common.tcp;
 
 public interface TcpClient<CNT> {
-    CNT connect(Config config) throws Exception;
+    CNT connect(String host, int port) throws Exception;
 
     void shutdown() throws Exception;
 }

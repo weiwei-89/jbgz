@@ -7,24 +7,30 @@ public class CompleteFuture implements SessionFuture {
     private static final Logger logger = LoggerFactory.getLogger(CompleteFuture.class);
 
     private volatile boolean complete = false;
+    private volatile boolean error = false;
+    private volatile Throwable cause = null;
     private FutureListener listener;
 
     @Override
-    public void addListener(FutureListener listener) {
+    public synchronized void addListener(FutureListener listener) {
         this.listener = listener;
         if(this.complete) {
             this.notifyListener();
         }
+        if(this.error) {
+            this.notifyErrorListener();
+        }
     }
 
-    public void complete() {
+    public synchronized void complete() {
         this.complete = true;
         this.notifyListener();
     }
 
-    public void error(Throwable cause) {
-        this.complete = true;
-        this.listener.onError(cause);
+    public synchronized void error(Throwable cause) {
+        this.error = true;
+        this.cause = cause;
+        this.notifyErrorListener();
     }
 
     private void notifyListener() {
@@ -33,6 +39,17 @@ public class CompleteFuture implements SessionFuture {
         }
         try {
             this.listener.onComplete();
+        } catch(Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+    }
+
+    private void notifyErrorListener() {
+        if(this.listener == null) {
+            return;
+        }
+        try {
+            this.listener.onError(this.cause);
         } catch(Exception e) {
             logger.error(e.getMessage(), e);
         }

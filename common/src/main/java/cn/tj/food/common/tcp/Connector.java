@@ -3,49 +3,63 @@ package cn.tj.food.common.tcp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 public abstract class Connector<USER, CNT> {
     private static final Logger logger = LoggerFactory.getLogger(Connector.class);
 
     private final TcpClient<CNT> client;
-    private final ClientSessionManager<USER, CNT, ClientCommonSession<CNT>> sessionManager;
+    private final Map<String, TcpSession> sessions = new ConcurrentHashMap<>();
 
-    public Connector(
-            TcpClient<CNT> client,
-            ClientSessionManager<USER, CNT, ClientCommonSession<CNT>> sessionManager
-    ) {
+    public Connector(TcpClient<CNT> client) {
         this.client = client;
-        this.sessionManager = sessionManager;
     }
 
     protected abstract ClientCommonSession<CNT> buildSession(TcpClient<CNT> client) throws Exception;
 
+    protected abstract String generateId(Config config, USER user);
+
     public void connect(Config config, USER user) throws Exception {
+        String sessionId = this.generateId(config, user);
+        logger.info("establish one session[session_id:{}](1st)......", sessionId);
         ClientCommonSession<CNT> session = this.buildSession(this.client);
-        try {
-            logger.info("current session is inactive, trying to establish(1st)......");
-            session.init(config);
-            this.sessionManager.addSession(config, user, session);
-        } catch(Exception e) {
-            logger.error("session establishment(1st) failed", e);
-        }
+        session.init(config);
+        sessions.putIfAbsent(sessionId, session);
     }
 
     public SessionFuture send(Config config, USER user, String info) throws Exception {
-        return this.sessionManager.getSession(config, user).send(info);
+        return this.sessions.get(this.generateId(config, user)).send(info);
     }
 
-    public void close(Config config, USER user) throws Exception {
-        this.sessionManager.closeSession(config, user);
-    }
-
-    // TODO 清理sessionManager
-    public void shutdown() throws Exception {
-        logger.info("shutting down connector......");
-        if(this.client == null) {
-            logger.info("done(not started)");
+    public void disconnect(Config config, USER user) throws Exception {
+        String sessionId = this.generateId(config, user);
+        logger.info("disconnect session[session_id:{}]......", sessionId);
+        TcpSession session = this.sessions.get(sessionId);
+        if(session == null) {
             return;
         }
+        try {
+            session.close();
+        } finally {
+            this.sessions.remove(sessionId);
+        }
+    }
+
+    public void close() throws Exception {
+        logger.info("close connector......");
+        if(this.client == null) {
+            logger.info("closed(never started)");
+            return;
+        }
+        for(TcpSession session : this.sessions.values()) {
+            try {
+                session.close();
+            } catch(Exception e) {
+                logger.error("close session error", e);
+            }
+        }
         this.client.shutdown();
-        logger.info("done");
+        logger.info("closed");
     }
 }

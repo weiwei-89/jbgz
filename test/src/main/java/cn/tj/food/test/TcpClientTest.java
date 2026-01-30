@@ -29,29 +29,23 @@ public class TcpClientTest {
         user.setPassword("123456");
         Connector<User, Channel> connector = null;
         try {
-            connector = new Connector<User, Channel>(
-                    Client.build(),
-                    new ClientSessionManager<User, Channel, ClientCommonSession<Channel>>() {
-                        @Override
-                        protected String generateId(Config config, User user) {
-                            return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
-                        }
-                    }
-            ) {
+            connector = new Connector<User, Channel>(Client.build()) {
                 @Override
                 protected ClientCommonSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
-                    Client client0 = (Client) client;
-                    return Session.create(client0.getGroup(), client);
+                    return Session.create(client);
+                }
+
+                @Override
+                protected String generateId(Config config, User user) {
+                    return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
                 }
             };
             connector.connect(config, user);
             connector.send(config, user, "hello");
+            connector.disconnect(config, user);
         } finally {
             if(connector != null) {
-                connector.close(config, user);
-            }
-            if(connector != null) {
-                connector.shutdown();
+                connector.close();
             }
         }
     }

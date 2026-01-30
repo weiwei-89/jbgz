@@ -41,26 +41,15 @@ public class StartupRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        this.taskPool.addTask(
+        this.taskPool.addGeneralTask(
                 "tcp-server",
-                new GeneralTask(
-                        new TcpServerProcessor()
-                ) {
-
-                }
+                new TcpServerProcessor()
         );
         this.scheduledTaskPool.addTask("scanning", new IntervalTask(new ScanningProcessor(), 5*1000));
     }
 
     private static class TcpServerProcessor implements Processor {
         private static final Logger logger = LoggerFactory.getLogger(TcpServerProcessor.class);
-
-        private final ServerSessionManager<User, Channel, Session> sessionManager = new ServerSessionManager<User, Channel, Session>() {
-            @Override
-            protected String generateId(Config config, User user) {
-                return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
-            }
-        };
 
         private Config tcpConfig;
         private User user;
@@ -111,8 +100,6 @@ public class StartupRunner implements ApplicationRunner {
                                                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                                     Session session = new Session();
                                                     session.setChannel(ctx.channel());
-                                                    // TODO 连接断开后清理sessionManager
-                                                    sessionManager.addSession(tcpConfig, user, session);
                                                     super.channelActive(ctx);
                                                 }
 
@@ -140,19 +127,15 @@ public class StartupRunner implements ApplicationRunner {
     private static class ScanningProcessor implements Processor {
         private static final Logger logger = LoggerFactory.getLogger(ScanningProcessor.class);
         private static final String APP_BASE_FOLDER_PATH = "D:\\edward\\test\\pandora\\event-bus\\app";
-        private static final Connector<User, Channel> connector = new Connector<User, Channel>(
-                Client.build(),
-                new ClientSessionManager<User, Channel, ClientCommonSession<Channel>>() {
-                    @Override
-                    protected String generateId(Config config, User user) {
-                        return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
-                    }
-                }
-        ) {
+        private static final Connector<User, Channel> connector = new Connector<User, Channel>(Client.build()) {
             @Override
             protected ClientCommonSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
-                Client client0 = (Client) client;
-                return cn.tj.food.netty_ext.client.Session.create(client0.getGroup(), client);
+                return cn.tj.food.netty_ext.client.Session.create(client);
+            }
+
+            @Override
+            protected String generateId(Config config, User user) {
+                return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
             }
         };
 

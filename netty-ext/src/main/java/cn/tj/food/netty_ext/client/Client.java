@@ -1,6 +1,5 @@
 package cn.tj.food.netty_ext.client;
 
-import cn.tj.food.common.tcp.Config;
 import cn.tj.food.common.tcp.TcpClient;
 import cn.tj.food.netty_ext.codec.encoder.Appender;
 import io.netty.bootstrap.Bootstrap;
@@ -21,8 +20,8 @@ public class Client implements TcpClient<Channel> {
     private ChannelInitializer<? extends SocketChannel> initializer;
 
     @Override
-    public Channel connect(Config config) throws Exception {
-        return this.bootstrap.connect(config.getHost(), config.getPort()).sync().channel();
+    public Channel connect(String host, int port) throws Exception {
+        return this.bootstrap.connect(host, port).sync().channel();
     }
 
     @Override

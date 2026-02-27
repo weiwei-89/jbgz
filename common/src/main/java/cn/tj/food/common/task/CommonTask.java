@@ -34,6 +34,10 @@ public abstract class CommonTask implements Runnable {
         cause.printStackTrace();
     }
 
+    protected void stop() {
+
+    }
+
     @Override
     public void run() {
         boolean triggered = false;

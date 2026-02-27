@@ -7,7 +7,9 @@ import io.netty.channel.ChannelFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Session extends ClientCommonSession<Channel> {
+import java.nio.charset.StandardCharsets;
+
+public class Session implements ClientSession<Channel> {
     private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
     private final TcpClient<Channel> client;
@@ -16,20 +18,23 @@ public class Session extends ClientCommonSession<Channel> {
         this.client = client;
     }
 
+    private Channel connection;
+
     @Override
     public Channel connect(Config config) throws Exception {
         if(this.client == null) {
             throw new Exception("client is null");
         }
-        return this.client.connect(config.getHost(), config.getPort());
+        this.connection = this.client.connect(config.getHost(), config.getPort());
+        return this.connection;
     }
 
     @Override
     public boolean isActive() {
-        if(this.getConnection() == null) {
+        if(this.connection == null) {
             return false;
         }
-        if(this.getConnection().isWritable()) {
+        if(this.connection.isWritable()) {
             return true;
         }
         return false;
@@ -37,13 +42,13 @@ public class Session extends ClientCommonSession<Channel> {
 
     @Override
     public SessionFuture send(String info) throws Exception {
-        logger.info("sending info......");
+        logger.info("send info......");
         CompleteFuture completeFuture = new CompleteFuture();
-        ChannelFuture future = this.getConnection().writeAndFlush(
-                this.getConnection()
+        ChannelFuture future = this.connection.writeAndFlush(
+                this.connection
                         .alloc()
                         .buffer()
-                        .writeBytes(info.getBytes())
+                        .writeBytes(info.getBytes(StandardCharsets.UTF_8))
         );
         future.addListener(
                 new ChannelFutureListener() {
@@ -67,16 +72,16 @@ public class Session extends ClientCommonSession<Channel> {
 
     @Override
     public void close() throws Exception {
-        logger.info("close session");
-        if(this.getConnection() == null) {
+        logger.info("close session......");
+        if(this.connection == null) {
             logger.info("closed(never connected)");
             return;
         }
-        this.getConnection().close();
+        this.connection.close();
         logger.info("closed");
     }
 
-    public static Session create(TcpClient<Channel> client) {
+    public static Session create(TcpClient<Channel> client) throws Exception {
         return new Session(client);
     }
 }

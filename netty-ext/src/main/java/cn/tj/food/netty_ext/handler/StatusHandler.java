@@ -27,13 +27,13 @@ public class StatusHandler extends ChannelInboundHandlerAdapter {
         if(evt instanceof IdleStateEvent) {
             IdleStateEvent event = (IdleStateEvent) evt;
             if(event.state() == IdleState.READER_IDLE) {
-                logger.info("reading bytes timeout, closing channel...... [channel_id:{}]", ctx.channel().id());
+                logger.info("read timeout, close channel...... [channel_id:{}]", ctx.channel().id());
                 ctx.close();
             } else if(event.state() == IdleState.WRITER_IDLE) {
-                logger.info("writing bytes timeout, closing channel...... [channel_id:{}]", ctx.channel().id());
+                logger.info("write timeout, close channel...... [channel_id:{}]", ctx.channel().id());
                 ctx.close();
             } else if(event.state() == IdleState.ALL_IDLE) {
-                logger.info("reading/writing bytes timeout, closing channel...... [channel_id:{}]", ctx.channel().id());
+                logger.info("read/write timeout, close channel...... [channel_id:{}]", ctx.channel().id());
                 ctx.close();
             }
         }

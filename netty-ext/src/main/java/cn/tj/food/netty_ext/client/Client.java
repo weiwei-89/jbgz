@@ -1,7 +1,9 @@
 package cn.tj.food.netty_ext.client;
 
 import cn.tj.food.common.tcp.TcpClient;
+import cn.tj.food.netty_ext.codec.decoder.StringMessageConvertor;
 import cn.tj.food.netty_ext.codec.encoder.Appender;
+import cn.tj.food.netty_ext.handler.StringPrinter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -9,6 +11,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 
 public class Client implements TcpClient<Channel> {
     private Client() {
@@ -52,10 +55,16 @@ public class Client implements TcpClient<Channel> {
     }
 
     private ChannelInitializer<? extends SocketChannel> defaultInitializer() {
+        StringMessageConvertor stringMessageConvertor = new StringMessageConvertor();
+        StringPrinter stringPrinter = new StringPrinter();
         return new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(new Appender("\r\n".getBytes()));
+                ch.pipeline()
+                        .addLast(new Appender("\r\n".getBytes()))
+                        .addLast(new LineBasedFrameDecoder(512))
+                        .addLast(stringMessageConvertor)
+                        .addLast(stringPrinter);
             }
         };
     }

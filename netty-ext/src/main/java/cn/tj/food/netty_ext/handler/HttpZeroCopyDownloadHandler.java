@@ -49,14 +49,14 @@ public class HttpZeroCopyDownloadHandler extends MessageToMessageDecoder<Connect
         future.addListener(new ChannelProgressiveFutureListener() {
             @Override
             public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) throws Exception {
-                logger.info("file transferring...... [progress:{},total:{},{}%]", progress, total, progress*100/total);
+                logger.info("transferring...... [progress:{},total:{},{}%]", progress, total, progress*100/total);
             }
 
             @Override
             public void operationComplete(ChannelProgressiveFuture future) throws Exception {
                 raf.close();
                 if(future.isSuccess()) {
-                    logger.info("file transfer completed");
+                    logger.info("completed");
                 }
             }
         });

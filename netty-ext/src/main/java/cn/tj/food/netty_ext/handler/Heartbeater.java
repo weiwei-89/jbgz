@@ -66,7 +66,7 @@ public class Heartbeater extends ChannelDuplexHandler {
             try {
                 this.execute(this.ctx);
             } catch(Exception e) {
-                e.printStackTrace();
+                logger.error("task error", e);
             }
         }
 

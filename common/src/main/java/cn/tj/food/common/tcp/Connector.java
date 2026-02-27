@@ -16,15 +16,15 @@ public abstract class Connector<USER, CNT> {
         this.client = client;
     }
 
-    protected abstract ClientCommonSession<CNT> buildSession(TcpClient<CNT> client) throws Exception;
+    protected abstract ClientSession<CNT> buildSession(TcpClient<CNT> client) throws Exception;
 
     protected abstract String generateId(Config config, USER user);
 
     public void connect(Config config, USER user) throws Exception {
         String sessionId = this.generateId(config, user);
-        logger.info("establish one session[session_id:{}](1st)......", sessionId);
-        ClientCommonSession<CNT> session = this.buildSession(this.client);
-        session.init(config);
+        logger.info("establish new session...... [session_id:{}](1st)", sessionId);
+        ClientSession<CNT> session = this.buildSession(this.client);
+        session.connect(config);
         sessions.putIfAbsent(sessionId, session);
     }
 
@@ -34,7 +34,7 @@ public abstract class Connector<USER, CNT> {
 
     public void disconnect(Config config, USER user) throws Exception {
         String sessionId = this.generateId(config, user);
-        logger.info("disconnect session[session_id:{}]......", sessionId);
+        logger.info("disconnect session...... [session_id:{}]", sessionId);
         TcpSession session = this.sessions.get(sessionId);
         if(session == null) {
             return;
@@ -56,7 +56,7 @@ public abstract class Connector<USER, CNT> {
             try {
                 session.close();
             } catch(Exception e) {
-                logger.error("close session error", e);
+                logger.error("close error", e);
             }
         }
         this.client.shutdown();

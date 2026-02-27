@@ -18,12 +18,22 @@ public abstract class ScheduledTask extends CommonTask {
         this.interval = interval;
     }
 
+    public long getInterval() {
+        return this.interval;
+    }
+
     private volatile boolean activated = true;
     private long lastProcessTime = System.currentTimeMillis();
     private ScheduledFuture<?> schedule;
 
     public boolean isActivated() {
         return this.activated;
+    }
+
+    public synchronized void waitForDeactivation() throws InterruptedException {
+        while(this.activated) {
+            this.wait();
+        }
     }
 
     public synchronized void deactivate() {
@@ -35,19 +45,18 @@ public abstract class ScheduledTask extends CommonTask {
         }
     }
 
-    public synchronized void waitForDeactivation() throws InterruptedException {
-        while(this.activated) {
-            this.wait();
-        }
-    }
-
     @Override
     protected boolean trigger() {
         return true;
     }
 
     @Override
-    protected synchronized void done(boolean result) {
+    protected final synchronized void done(boolean result) {
+        try {
+            this.beforeNext(result);
+        } catch(Exception e) {
+            this.error(e);
+        }
         if(!this.activated) {
             return;
         }
@@ -68,4 +77,6 @@ public abstract class ScheduledTask extends CommonTask {
             );
         }
     }
+
+    protected abstract void beforeNext(boolean result) throws Exception;
 }

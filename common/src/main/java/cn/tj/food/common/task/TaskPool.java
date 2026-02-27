@@ -14,10 +14,10 @@ public class TaskPool {
     private static final Logger logger = LoggerFactory.getLogger(TaskPool.class);
     private static final int AVAILABLE_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
-    private final Map<String, Future<?>> taskMap = new HashMap<>();
+    private final Map<String, CommonTask> taskMap = new HashMap<>();
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
     private final ScheduledExecutorService pool = Executors.newScheduledThreadPool(
-            AVAILABLE_PROCESSORS,
+            AVAILABLE_PROCESSORS*2,
             new ThreadFactory() {
                 private final AtomicInteger count = new AtomicInteger(0);
 
@@ -42,15 +42,42 @@ public class TaskPool {
         return TaskPool.SingletonHolder.INSTANCE;
     }
 
-    public void addTask(String taskName, GeneralTask task) throws Exception {
-        this.addTask(taskName, new GeneralTaskProcessor(task));
+    public void addGeneralTask(String taskName, Processor processor) throws Exception {
+        this.addTask(
+                taskName,
+                new GeneralTaskProcessor(
+                        new DefaultGeneralTask(processor)
+                )
+        );
+    }
+
+    public void addGeneralTask(String taskName, GeneralTask task) throws Exception {
+        this.addTask(
+                taskName,
+                new GeneralTaskProcessor(task)
+        );
+    }
+
+    public void addScheduledTask(String taskName, Processor processor, long interval) throws Exception {
+        this.addTask(
+                taskName,
+                new ScheduledTaskProcessor(
+                        new DefaultScheduledTask(
+                                processor,
+                                interval
+                        )
+                )
+        );
     }
 
     public void addScheduledTask(String taskName, ScheduledTask task) throws Exception {
-        this.addTask(taskName, new ScheduledTaskProcessor(task));
+        this.addTask(
+                taskName,
+                new ScheduledTaskProcessor(task)
+        );
     }
 
-    public void addTask(String taskName, Processor processor) throws Exception {
+    private void addTask(String taskName, TaskProcessor<?> processor) throws Exception {
         if(this.taskMap.containsKey(taskName)) {
             logger.info("task exists [{}]", taskName);
             return;
@@ -66,7 +93,7 @@ public class TaskPool {
                 logger.info("task exists [{}]", taskName);
                 return;
             }
-            Future<?> future = this.pool.submit(
+            this.pool.submit(
                     new GeneralTask(processor) {
                         @Override
                         protected void done(boolean result) {
@@ -80,72 +107,57 @@ public class TaskPool {
                         }
                     }
             );
-            this.taskMap.put(taskName, future);
+            this.taskMap.put(taskName, processor.getTask());
             logger.info("task added [{}]", taskName);
         } finally {
             this.rwLock.writeLock().unlock();
         }
     }
 
-    private class GeneralTaskProcessor implements Processor {
-        private final GeneralTask task;
-
-        public GeneralTaskProcessor(GeneralTask task) {
-            this.task = task;
-        }
-
-        @Override
-        public void init() throws Exception {
-
-        }
-
-        @Override
-        public void process() throws Exception {
-            this.task.run();
-        }
-    }
-
-    private class ScheduledTaskProcessor implements Processor {
-        private final ScheduledTask task;
-
-        public ScheduledTaskProcessor(ScheduledTask task) {
-            this.task = task;
-        }
-
-        @Override
-        public void init() throws Exception {
-
-        }
-
-        @Override
-        public void process() throws Exception {
-            this.task.run();
-            this.task.waitForDeactivation();
-        }
-    }
-
-    public void stopTask(String taskName) throws Exception {
+    public CommonTask getTask(String taskName) throws Exception {
         if(!this.taskMap.containsKey(taskName)) {
             logger.info("task does not exist [{}]", taskName);
-            return;
+            return null;
         }
         boolean acquired = this.rwLock.readLock()
                 .tryLock(10, TimeUnit.SECONDS);
         if(!acquired) {
-            logger.info("task stopped failed [{}]", taskName);
-            return;
+            logger.info("task list acquired failed");
+            return null;
         }
         try {
             if(!this.taskMap.containsKey(taskName)) {
                 logger.info("task does not exist [{}]", taskName);
-                return;
+                return null;
             }
-            Future<?> future = this.taskMap.get(taskName);
-            future.cancel(false);
+            return this.taskMap.get(taskName);
         } finally {
             this.rwLock.readLock().unlock();
         }
     }
+
+//    public void stopTask(String taskName) throws Exception {
+//        if(!this.taskMap.containsKey(taskName)) {
+//            logger.info("task does not exist [{}]", taskName);
+//            return;
+//        }
+//        boolean acquired = this.rwLock.writeLock()
+//                .tryLock(10, TimeUnit.SECONDS);
+//        if(!acquired) {
+//            logger.info("task stopped failed [{}]", taskName);
+//            return;
+//        }
+//        try {
+//            if(!this.taskMap.containsKey(taskName)) {
+//                logger.info("task does not exist [{}]", taskName);
+//                return;
+//            }
+//            CommonTask task = this.taskMap.get(taskName);
+//            task.stop();
+//        } finally {
+//            this.rwLock.writeLock().unlock();
+//        }
+//    }
 
     public void list() throws Exception {
         if(this.taskMap.isEmpty()) {
@@ -165,13 +177,69 @@ public class TaskPool {
             }
             logger.info("there are {} tasks", this.taskMap.size());
             int number = 0;
-            for(Map.Entry<String, Future<?>> entry : this.taskMap.entrySet()) {
+            for(Map.Entry<String, CommonTask> entry : this.taskMap.entrySet()) {
                 number++;
                 String taskName = entry.getKey();
                 logger.info("{}.{}", number, taskName);
             }
         } finally {
             this.rwLock.readLock().unlock();
+        }
+    }
+
+    private abstract class TaskProcessor<T extends CommonTask> extends SimpleProcessor {
+        private final T task;
+
+        public TaskProcessor(T task) {
+            this.task = task;
+        }
+
+        public T getTask() {
+            return this.task;
+        }
+    }
+
+    private class GeneralTaskProcessor extends TaskProcessor<GeneralTask> {
+        public GeneralTaskProcessor(GeneralTask task) {
+            super(task);
+        }
+
+        @Override
+        public void process() throws Exception {
+            this.getTask().run();
+        }
+    }
+
+    private class ScheduledTaskProcessor extends TaskProcessor<ScheduledTask> {
+        public ScheduledTaskProcessor(ScheduledTask task) {
+            super(task);
+        }
+
+        @Override
+        public void process() throws Exception {
+            Thread.sleep(this.getTask().getInterval());
+            this.getTask().run();
+            this.getTask().waitForDeactivation();
+        }
+    }
+
+    private class DefaultGeneralTask extends GeneralTask {
+        public DefaultGeneralTask(Processor processor) {
+            super(processor);
+        }
+    }
+
+    private class DefaultScheduledTask extends ScheduledTask {
+        public DefaultScheduledTask(
+                Processor processor,
+                long interval
+        ) {
+            super(processor, pool, interval);
+        }
+
+        @Override
+        protected void beforeNext(boolean result) throws Exception {
+
         }
     }
 }

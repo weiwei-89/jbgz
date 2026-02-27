@@ -1,6 +1,7 @@
 package cn.tj.food.netty_ext.handler;
 
 import cn.tj.food.common.router.ApiLoader;
+import cn.tj.food.common.router.ApiParam;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -15,6 +16,7 @@ public class HttpDispatchHandler extends SimpleChannelInboundHandler<FullHttpReq
     private static final Logger logger = LoggerFactory.getLogger(HttpDispatchHandler.class);
 
     public static final AttributeKey<String> CONTEXT_URI = AttributeKey.newInstance("uri");
+    public static final AttributeKey<ApiParam> CONTEXT_PARAM = AttributeKey.newInstance("param");
 
     private final ApiLoader apiLoader;
 

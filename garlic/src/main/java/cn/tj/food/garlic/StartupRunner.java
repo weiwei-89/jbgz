@@ -129,7 +129,7 @@ public class StartupRunner implements ApplicationRunner {
         private static final String APP_BASE_FOLDER_PATH = "D:\\edward\\test\\pandora\\event-bus\\app";
         private static final Connector<User, Channel> connector = new Connector<User, Channel>(Client.build()) {
             @Override
-            protected ClientCommonSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
+            protected ClientSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
                 return cn.tj.food.netty_ext.client.Session.create(client);
             }
 

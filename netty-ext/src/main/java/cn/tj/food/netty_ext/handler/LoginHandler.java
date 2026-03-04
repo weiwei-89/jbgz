@@ -24,6 +24,7 @@ public class LoginHandler extends MessageToMessageDecoder<String> {
         if(this.login()) {
 
         } else {
+            logger.info("login failed");
             ChannelFuture future = ctx.writeAndFlush(
                     ctx.channel()
                             .alloc()

@@ -34,8 +34,14 @@ public class TcpClientTest {
         connector = new Connector<User, Channel>(Client.build()) {
             @Override
             protected ClientSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
-                return new AutoClientSession<Channel>(Session.create(client)) {
+                return new AutoClientSession<Channel>(
+                        Session.create(client),
+                        10*1000
+                ) {
+                    @Override
+                    protected void reconnectDone(Config config) throws Exception {
 
+                    }
                 };
             }
 

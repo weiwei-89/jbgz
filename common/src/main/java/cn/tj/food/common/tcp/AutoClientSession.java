@@ -9,9 +9,11 @@ import org.slf4j.LoggerFactory;
 public abstract class AutoClientSession<CNT> extends ClientSessionAdapter<CNT> implements ReconnectableClientSession<CNT> {
     private final TaskPool taskPool = TaskPool.getInstance();
     private final String RETRY_TASK_NAME = "session-retry-task";
+    private final long interval;
 
-    public AutoClientSession(ClientSession<CNT> session) {
+    public AutoClientSession(ClientSession<CNT> session, long interval) {
         super(session);
+        this.interval = interval;
     }
 
     @Override
@@ -23,7 +25,7 @@ public abstract class AutoClientSession<CNT> extends ClientSessionAdapter<CNT> i
         this.taskPool.addScheduledTask(
                 RETRY_TASK_NAME,
                 new IsActiveProcessor<>(this, config),
-                10*1000
+                this.interval
         );
     }
 
@@ -59,6 +61,12 @@ public abstract class AutoClientSession<CNT> extends ClientSessionAdapter<CNT> i
 
     @Override
     public CNT reconnect(Config config) throws Exception {
-        return this.session.connect(config);
+        try {
+            return this.session.connect(config);
+        } finally {
+            this.reconnectDone(config);
+        }
     }
+
+    protected abstract void reconnectDone(Config config) throws Exception;
 }

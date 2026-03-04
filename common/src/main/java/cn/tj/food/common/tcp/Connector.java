@@ -28,6 +28,10 @@ public abstract class Connector<USER, CNT> {
         sessions.putIfAbsent(sessionId, session);
     }
 
+    public SessionFuture login(Config config, USER user) throws Exception {
+        return this.send(config, user, "login!!!");
+    }
+
     public SessionFuture send(Config config, USER user, String info) throws Exception {
         return this.sessions.get(this.generateId(config, user)).send(info);
     }

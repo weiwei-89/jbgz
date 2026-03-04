@@ -1,10 +1,18 @@
 package cn.tj.food.test;
 
+import cn.tj.food.common.FileReader;
+import cn.tj.food.common.FileWriter;
 import cn.tj.food.common.task.SimpleProcessor;
 import cn.tj.food.common.task.TaskPool;
+import cn.tj.food.common.tcp.*;
+import cn.tj.food.netty_ext.client.Client;
+import cn.tj.food.netty_ext.client.Session;
+import io.netty.channel.Channel;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
 
 public class TcpAppTest {
     private static final Logger logger = LoggerFactory.getLogger(TcpAppTest.class);
@@ -13,6 +21,8 @@ public class TcpAppTest {
     private static final Object client = new Object();
     private static volatile boolean running = true;
     private static final TaskPool taskPool = TaskPool.getInstance();
+    private static final String ROOT_PATH = "D:\\edward\\test\\jbgz\\test";
+    private static final String RUN_FILE_NAME = "tcp-app.run";
 
     public static void main(String[] args) throws Exception {
         Options options = new Options();
@@ -22,35 +32,103 @@ public class TcpAppTest {
         CommandLine cmd = parser.parse(options, args);
         String serverHost = cmd.getOptionValue(SERVER_HOST);
         int serverPort = Integer.parseInt(cmd.getOptionValue(SERVER_PORT));
+        Config config = new Config();
+        config.setHost(serverHost);
+        config.setPort(serverPort);
+        User user = new User();
+        user.setName("edward");
+        user.setPassword("123456");
+        Connector<User, Channel> connector = null;
+        connector = new Connector<User, Channel>(Client.build()) {
+            @Override
+            protected ClientSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
+                return new AutoClientSession<Channel>(
+                        Session.create(client),
+                        10*1000
+                ) {
+                    @Override
+                    protected void reconnectDone(Config config) throws Exception {
+
+                    }
+                };
+            }
+
+            @Override
+            protected String generateId(Config config, User user) {
+                return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
+            }
+        };
+        FileWriter.write("running".getBytes(), ROOT_PATH, RUN_FILE_NAME);
         logger.info("tcp app started");
+        taskPool.addGeneralTask(
+                "connect",
+                new ConnectProcessor(connector, config, user)
+        );
         Runtime.getRuntime()
                 .addShutdownHook(
                         new Thread(
                                 () -> {
-                                    logger.info("close tcp app......");
-                                    synchronized(client) {
-                                        running = false;
-                                        client.notifyAll();
+                                    logger.info("close tcp app...... (console)");
+                                    synchronized(TcpAppTest.client) {
+                                        TcpAppTest.running = false;
+                                        TcpAppTest.client.notifyAll();
                                     }
                                 }
                         )
                 );
-        taskPool.addGeneralTask(
-                "tcp-app",
-                new TcpClientProcessor()
+        taskPool.addScheduledTask(
+                "shutdown",
+                new ShutdownProcessor(),
+                5*1000
         );
-        synchronized(client) {
-            while(running) {
-                client.wait();
+        synchronized(TcpAppTest.client) {
+            while(TcpAppTest.running) {
+                TcpAppTest.client.wait();
             }
         }
+        connector.disconnect(config, user);
+        connector.close();
         logger.info("stopped");
     }
 
-    private static class TcpClientProcessor extends SimpleProcessor {
+    private static class ConnectProcessor extends SimpleProcessor {
+        private final Connector<User, Channel> connector;
+        private final Config config;
+        private final User user;
+
+        public ConnectProcessor(
+                Connector<User, Channel> connector,
+                Config config,
+                User user
+        ) {
+            this.connector = connector;
+            this.config = config;
+            this.user = user;
+        }
+
         @Override
         public void process() throws Exception {
+            this.connector.connect(this.config, this.user);
+        }
+    }
 
+    private static class ShutdownProcessor extends SimpleProcessor {
+        private static final Logger logger = LoggerFactory.getLogger(ShutdownProcessor.class);
+
+        @Override
+        public void process() throws Exception {
+            logger.info("[status]listening......");
+            FileReader fileReader = new FileReader();
+            String runInfo = fileReader.read(TcpAppTest.ROOT_PATH+File.separator+TcpAppTest.RUN_FILE_NAME);
+            if(!"shutdown".equals(runInfo)) {
+                logger.info("[status]running......");
+                return;
+            }
+            logger.info("[status]shutdown tcp app...... (.run文件)");
+            synchronized(TcpAppTest.client) {
+                TcpAppTest.running = false;
+                TcpAppTest.client.notifyAll();
+            }
         }
     }
 }

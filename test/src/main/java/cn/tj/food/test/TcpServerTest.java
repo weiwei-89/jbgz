@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 public class TcpServerTest {
     private static final Logger logger = LoggerFactory.getLogger(TcpServerTest.class);
     private static final String LISTEN_PORT = "listen.port";
-    private static final long READ_TIMEOUT = 500*1000;
+    private static final long READ_TIMEOUT = 300*1000;
     private static final long WRITE_TIMEOUT = 0L;
     private static final long READ_WRITE_TIMEOUT = 0L;
 
@@ -60,31 +60,31 @@ public class TcpServerTest {
         //                        .addLast(new FrameDecoder(new byte[]{0x3D}, 8))
                                 .addLast(new LineBasedFrameDecoder(512))
                                 .addLast(stringMessageConvertor)
-                                .addLast(new LoginHandler())
-                                .addLast(
-                                        new ChannelInboundHandlerAdapter() {
-                                            @Override
-                                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                                                if(evt instanceof Heartbeater.HeartbeatEvent) {
+                                .addLast(new LoginHandler());
+//                                .addLast(
+//                                        new ChannelInboundHandlerAdapter() {
+//                                            @Override
+//                                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+//                                                if(evt instanceof Heartbeater.HeartbeatEvent) {
 //                                                    logger.info("tick......");
-                                                }
-                                                super.userEventTriggered(ctx, evt);
-                                            }
-
-                                            @Override
-                                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                                try {
-                                                    if(msg instanceof ByteBuf) {
-                                                        ByteBuf buffer = (ByteBuf) msg;
-                                                        logger.info("hex: {}",
-                                                                DataUtil.toHexString(ByteBufUtil.getReadableBytes(buffer)));
-                                                    }
-                                                } finally {
-                                                    ReferenceCountUtil.release(msg, ReferenceCountUtil.refCnt(msg));
-                                                }
-                                            }
-                                        }
-                                );
+//                                                }
+//                                                super.userEventTriggered(ctx, evt);
+//                                            }
+//
+//                                            @Override
+//                                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+//                                                try {
+//                                                    if(msg instanceof ByteBuf) {
+//                                                        ByteBuf buffer = (ByteBuf) msg;
+//                                                        logger.info("hex: {}",
+//                                                                DataUtil.toHexString(ByteBufUtil.getReadableBytes(buffer)));
+//                                                    }
+//                                                } finally {
+//                                                    ReferenceCountUtil.release(msg, ReferenceCountUtil.refCnt(msg));
+//                                                }
+//                                            }
+//                                        }
+//                                );
                     }
                 }
         );

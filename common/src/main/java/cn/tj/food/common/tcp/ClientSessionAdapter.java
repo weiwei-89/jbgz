@@ -40,6 +40,10 @@ public abstract class ClientSessionAdapter<CNT> implements ClientSession<CNT> {
         }
     }
 
+    public ClientSession<CNT> getSession() {
+        return this.session;
+    }
+
     protected abstract void connectDone(Config config) throws Exception;
 
     protected abstract void closeDone() throws Exception;

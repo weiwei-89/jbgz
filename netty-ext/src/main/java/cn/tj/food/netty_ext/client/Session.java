@@ -14,11 +14,11 @@ public class Session implements ClientSession<Channel> {
 
     private final TcpClient<Channel> client;
 
-    private Session(TcpClient<Channel> client) {
+    public Session(TcpClient<Channel> client) {
         this.client = client;
     }
 
-    private Channel connection;
+    protected Channel connection;
 
     @Override
     public Channel connect(Config config) throws Exception {

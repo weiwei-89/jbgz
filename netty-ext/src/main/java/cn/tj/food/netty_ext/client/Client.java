@@ -20,7 +20,7 @@ public class Client implements TcpClient<Channel> {
 
     private EventLoopGroup group;
     private Bootstrap bootstrap;
-    private ChannelInitializer<? extends SocketChannel> initializer;
+//    private ChannelInitializer<? extends SocketChannel> initializer;
 
     @Override
     public Channel connect(String host, int port) throws Exception {
@@ -36,22 +36,22 @@ public class Client implements TcpClient<Channel> {
         return this.group;
     }
 
-    public void setInitializer(ChannelInitializer<? extends SocketChannel> initializer) {
-        this.initializer = initializer;
-    }
+//    public void setInitializer(ChannelInitializer<? extends SocketChannel> initializer) {
+//        this.initializer = initializer;
+//    }
 
-    private void init() {
+    private void init(ChannelInitializer<? extends SocketChannel> initializer) {
         this.group = new NioEventLoopGroup();
-        ChannelInitializer<? extends SocketChannel> initializer = null;
-        if(this.initializer == null) {
-            initializer = this.defaultInitializer();
-        } else {
-            initializer = this.initializer;
-        }
+//        ChannelInitializer<? extends SocketChannel> initializer = null;
+//        if(this.initializer == null) {
+//            initializer = this.defaultInitializer();
+//        } else {
+//            initializer = this.initializer;
+//        }
         this.bootstrap = new Bootstrap();
         this.bootstrap.group(this.group)
                 .channel(NioSocketChannel.class)
-                .handler(initializer);
+                .handler(initializer==null?this.defaultInitializer():initializer);
     }
 
     private ChannelInitializer<? extends SocketChannel> defaultInitializer() {
@@ -71,7 +71,13 @@ public class Client implements TcpClient<Channel> {
 
     public static Client build() {
         Client client = new Client();
-        client.init();
+        client.init(null);
+        return client;
+    }
+
+    public static Client build(ChannelInitializer<? extends SocketChannel> initializer) {
+        Client client = new Client();
+        client.init(initializer);
         return client;
     }
 }

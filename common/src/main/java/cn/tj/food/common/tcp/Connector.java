@@ -10,7 +10,7 @@ public abstract class Connector<USER, CNT> {
     private static final Logger logger = LoggerFactory.getLogger(Connector.class);
 
     private final TcpClient<CNT> client;
-    private final Map<String, TcpSession> sessions = new ConcurrentHashMap<>();
+    protected final Map<String, TcpSession> sessions = new ConcurrentHashMap<>();
 
     public Connector(TcpClient<CNT> client) {
         this.client = client;

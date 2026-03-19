@@ -11,6 +11,9 @@ public class ByteBufUtil {
     }
 
     public static int index(ByteBuf buffer, byte[] bytes) {
+        if(buffer.readableBytes() < bytes.length) {
+            return -1;
+        }
         boolean find = false;
         for(int i=buffer.readerIndex(); i<=buffer.readerIndex()+buffer.readableBytes()-bytes.length; i++) {
             ByteBuf part = buffer.slice(i, bytes.length);

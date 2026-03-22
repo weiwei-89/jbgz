@@ -8,7 +8,7 @@
         <artifactId>jbgz</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-    <artifactId>test</artifactId>
+    <artifactId>${project.parent.artifactId}-test</artifactId>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
@@ -17,22 +17,22 @@
     <dependencies>
         <dependency>
             <groupId>cn.tj.food</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>jbgz-common</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.tj.food</groupId>
-            <artifactId>netty-ext</artifactId>
+            <artifactId>jbgz-netty-ext</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.tj.food</groupId>
-            <artifactId>onion</artifactId>
+            <artifactId>jbgz-onion</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.tj.food</groupId>
-            <artifactId>sauce</artifactId>
+            <artifactId>jbgz-sauce</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

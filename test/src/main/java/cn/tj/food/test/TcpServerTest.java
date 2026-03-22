@@ -65,10 +65,10 @@ public class TcpServerTest {
 //                                        new ChannelInboundHandlerAdapter() {
 //                                            @Override
 //                                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+//                                                super.userEventTriggered(ctx, evt);
 //                                                if(evt instanceof Heartbeater.HeartbeatEvent) {
 //                                                    logger.info("tick......");
 //                                                }
-//                                                super.userEventTriggered(ctx, evt);
 //                                            }
 //
 //                                            @Override

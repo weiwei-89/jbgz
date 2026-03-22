@@ -6,12 +6,12 @@ import cn.tj.food.common.task.TaskPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AutoClientSession<CNT> extends ClientSessionAdapter<CNT> implements ReconnectableClientSession<CNT> {
+public abstract class AutoClientSession<CNT, S extends ClientSession<CNT>> extends ClientSessionAdapter<CNT, S> implements ReconnectableClientSession<CNT> {
     private final TaskPool taskPool = TaskPool.getInstance();
     private final String RETRY_TASK_NAME = "session-retry-task";
     private final long interval;
 
-    public AutoClientSession(ClientSession<CNT> session, long interval) {
+    public AutoClientSession(S session, long interval) {
         super(session);
         this.interval = interval;
     }
@@ -62,7 +62,7 @@ public abstract class AutoClientSession<CNT> extends ClientSessionAdapter<CNT> i
     @Override
     public CNT reconnect(Config config) throws Exception {
         try {
-            return this.session.connect(config);
+            return this.getSession().connect(config);
         } finally {
             this.reconnectDone(config);
         }

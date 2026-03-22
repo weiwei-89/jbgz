@@ -1,9 +1,9 @@
 package cn.tj.food.common.tcp;
 
-public abstract class ClientSessionAdapter<CNT> implements ClientSession<CNT> {
-    protected final ClientSession<CNT> session;
+public abstract class ClientSessionAdapter<CNT, S extends ClientSession<CNT>> implements ClientSession<CNT> {
+    private final S session;
 
-    public ClientSessionAdapter(ClientSession<CNT> session) {
+    public ClientSessionAdapter(S session) {
         this.session = session;
     }
 
@@ -40,7 +40,7 @@ public abstract class ClientSessionAdapter<CNT> implements ClientSession<CNT> {
         }
     }
 
-    public ClientSession<CNT> getSession() {
+    public S getSession() {
         return this.session;
     }
 

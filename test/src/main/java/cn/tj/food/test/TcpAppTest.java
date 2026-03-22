@@ -38,11 +38,10 @@ public class TcpAppTest {
         User user = new User();
         user.setName("edward");
         user.setPassword("123456");
-        Connector<User, Channel> connector = null;
-        connector = new Connector<User, Channel>(Client.build()) {
+        Connector<User, Channel, AutoClientSession<Channel, Session>> connector = new Connector<User, Channel, AutoClientSession<Channel, Session>>(Client.build()) {
             @Override
-            protected ClientSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
-                return new AutoClientSession<Channel>(
+            protected AutoClientSession<Channel, Session> buildSession(TcpClient<Channel> client) throws Exception {
+                return new AutoClientSession<Channel, Session>(
                         Session.create(client),
                         10*1000
                 ) {
@@ -68,7 +67,7 @@ public class TcpAppTest {
                 .addShutdownHook(
                         new Thread(
                                 () -> {
-                                    logger.info("close tcp app...... (console)");
+                                    logger.info("shutdown tcp app...... (console)");
                                     synchronized(TcpAppTest.client) {
                                         TcpAppTest.running = false;
                                         TcpAppTest.client.notifyAll();
@@ -92,12 +91,12 @@ public class TcpAppTest {
     }
 
     private static class ConnectProcessor extends SimpleProcessor {
-        private final Connector<User, Channel> connector;
+        private final Connector<User, Channel, AutoClientSession<Channel, Session>> connector;
         private final Config config;
         private final User user;
 
         public ConnectProcessor(
-                Connector<User, Channel> connector,
+                Connector<User, Channel, AutoClientSession<Channel, Session>> connector,
                 Config config,
                 User user
         ) {
@@ -117,11 +116,11 @@ public class TcpAppTest {
 
         @Override
         public void process() throws Exception {
-            logger.info("[status]listening......");
+            logger.debug("[status]listening......");
             FileReader fileReader = new FileReader();
             String runInfo = fileReader.read(TcpAppTest.ROOT_PATH+File.separator+TcpAppTest.RUN_FILE_NAME);
             if(!"shutdown".equals(runInfo)) {
-                logger.info("[status]running......");
+                logger.debug("[status]running......");
                 return;
             }
             logger.info("[status]shutdown tcp app...... (.run文件)");

@@ -30,11 +30,10 @@ public class TcpClientTest {
         User user = new User();
         user.setName("edward");
         user.setPassword("123456");
-        Connector<User, Channel> connector = null;
-        connector = new Connector<User, Channel>(Client.build()) {
+        Connector<User, Channel, AutoClientSession<Channel, Session>> connector = new Connector<User, Channel, AutoClientSession<Channel, Session>>(Client.build()) {
             @Override
-            protected ClientSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
-                return new AutoClientSession<Channel>(
+            protected AutoClientSession<Channel, Session> buildSession(TcpClient<Channel> client) throws Exception {
+                return new AutoClientSession<Channel, Session>(
                         Session.create(client),
                         10*1000
                 ) {
@@ -70,12 +69,12 @@ public class TcpClientTest {
     }
 
     private static class SendHelloProcessor extends SimpleProcessor {
-        private final Connector<User, Channel> connector;
+        private final Connector<User, Channel, AutoClientSession<Channel, Session>> connector;
         private final Config config;
         private final User user;
 
         public SendHelloProcessor(
-                Connector<User, Channel> connector,
+                Connector<User, Channel, AutoClientSession<Channel, Session>> connector,
                 Config config,
                 User user
         ) {
@@ -86,7 +85,7 @@ public class TcpClientTest {
 
         @Override
         public void process() throws Exception {
-            this.connector.send(this.config, this.user, "hello");
+            this.connector.getSession(this.config, this.user).send("hello");
         }
     }
 }

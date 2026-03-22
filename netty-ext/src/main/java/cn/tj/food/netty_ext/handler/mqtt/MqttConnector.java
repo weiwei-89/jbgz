@@ -3,14 +3,14 @@ package cn.tj.food.netty_ext.handler.mqtt;
 import cn.tj.food.common.tcp.*;
 import io.netty.channel.Channel;
 
-public abstract class MqttConnector extends Connector<User, Channel> {
+public abstract class MqttConnector extends Connector<User, Channel, AutoClientSession<Channel, MqttSession>> {
     public MqttConnector(TcpClient<Channel> client) {
         super(client);
     }
 
     @Override
-    protected ClientSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
-        return new AutoClientSession<Channel>(
+    protected AutoClientSession<Channel, MqttSession> buildSession(TcpClient<Channel> client) throws Exception {
+        return new AutoClientSession<Channel, MqttSession>(
                 new MqttSession(client),
                 10*1000
         ) {
@@ -21,9 +21,7 @@ public abstract class MqttConnector extends Connector<User, Channel> {
         };
     }
 
-    public void publish(Config config, User user, String topic, String message) {
-        ClientSessionAdapter<Channel> sessionAdapter = (ClientSessionAdapter<Channel>) this.sessions.get(this.generateId(config, user));
-        MqttSession mqttSession = (MqttSession) sessionAdapter.getSession();
-        mqttSession.publish(topic, message);
+    public MqttSession getMqttSession(Config config, User user) {
+        return this.getSession(config, user).getSession();
     }
 }

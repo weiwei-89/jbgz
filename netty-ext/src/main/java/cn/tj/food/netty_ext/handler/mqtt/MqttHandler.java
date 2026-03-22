@@ -1,12 +1,10 @@
 package cn.tj.food.netty_ext.handler.mqtt;
 
+import cn.tj.food.netty_ext.handler.Heartbeater;
 import cn.tj.food.netty_ext.util.ByteBufUtil;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.mqtt.*;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,27 +14,66 @@ import java.util.Collections;
 public class MqttHandler extends SimpleChannelInboundHandler<MqttMessage> {
     private static final Logger logger = LoggerFactory.getLogger(MqttHandler.class);
 
-    private final String clientId;
-    private final String userName;
-    private final String password;
-
-    public MqttHandler(String clientId, String userName, String password) {
-        this.clientId = clientId;
-        this.userName = userName;
-        this.password = password;
-    }
-
-    private Channel channel;
-
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         logger.info("MqttHandler added");
-        this.channel = ctx.channel();
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        super.channelActive(ctx);
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        super.userEventTriggered(ctx, evt);
+        if(evt instanceof MqttLoginEvent) {
+            MqttLoginEvent event = (MqttLoginEvent) evt;
+            this.login(ctx, event.getClientId(), event.getUserName(), event.getPassword());
+        } else if(evt instanceof MqttPublishEvent) {
+            MqttPublishEvent event = (MqttPublishEvent) evt;
+            this.publish(ctx, event.getTopic(), event.getMessage());
+        } else if(evt instanceof MqttSubscribeEvent) {
+            MqttSubscribeEvent event = (MqttSubscribeEvent) evt;
+            this.subscribe(ctx, event.getTopic(), event.getQos());
+        } else if(evt instanceof Heartbeater.HeartbeatEvent) {
+            this.ping(ctx);
+        }
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, MqttMessage msg) throws Exception {
+        switch(msg.fixedHeader().messageType()) {
+            case CONNACK:
+                MqttConnAckMessage connAckMessage = (MqttConnAckMessage) msg;
+                if(connAckMessage.variableHeader().connectReturnCode() != MqttConnectReturnCode.CONNECTION_ACCEPTED) {
+                    logger.info("connect failed");
+                    ctx.close();
+                }
+                logger.info("connect succeed");
+                break;
+            case SUBACK:
+                logger.info("subscribe succeed");
+                break;
+            case PUBACK:
+                logger.info("publish succeed");
+                break;
+            case PUBLISH:
+                MqttPublishMessage publishMessage = (MqttPublishMessage) msg;
+                logger.info("topic:{}, info:{}",
+                        publishMessage.variableHeader().topicName(),
+                        new String(ByteBufUtil.getReadableBytes(publishMessage.payload())));
+                break;
+            case PINGRESP:
+                logger.info("ping succeed");
+                break;
+            default:
+                throw new Exception(String.format("unhandled message type: %s", msg.fixedHeader().messageType()));
+        }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        logger.error("MqttHandler error", cause);
+    }
+
+    private void login(ChannelHandlerContext ctx, String clientId, String userName, String password) {
         MqttFixedHeader fixedHeader = new MqttFixedHeader(
                 MqttMessageType.CONNECT,
                 false,
@@ -56,69 +93,16 @@ public class MqttHandler extends SimpleChannelInboundHandler<MqttMessage> {
                 60
         );
         MqttConnectPayload payload = new MqttConnectPayload(
-                this.clientId,
+                clientId,
                 null,
                 "".getBytes(StandardCharsets.UTF_8),
-                this.userName,
-                this.password.getBytes(StandardCharsets.UTF_8)
+                userName,
+                password.getBytes(StandardCharsets.UTF_8)
         );
         ctx.writeAndFlush(new MqttConnectMessage(fixedHeader, variableHeader, payload));
     }
 
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        super.userEventTriggered(ctx, evt);
-        if(evt instanceof IdleStateEvent) {
-            IdleStateEvent event = (IdleStateEvent) evt;
-            if(event.state() == IdleState.WRITER_IDLE) {
-                logger.info("send heartbeat");
-                MqttFixedHeader header = new MqttFixedHeader(
-                        MqttMessageType.PINGREQ,
-                        false,
-                        MqttQoS.AT_MOST_ONCE,
-                        false,
-                        0
-                );
-                ctx.writeAndFlush(new MqttMessage(header));
-            }
-        }
-    }
-
-    @Override
-    protected void channelRead0(ChannelHandlerContext ctx, MqttMessage msg) throws Exception {
-        switch(msg.fixedHeader().messageType()) {
-            case CONNACK:
-                MqttConnAckMessage connAckMessage = (MqttConnAckMessage) msg;
-                if(connAckMessage.variableHeader().connectReturnCode() != MqttConnectReturnCode.CONNECTION_ACCEPTED) {
-                    logger.info("connect failed");
-                    ctx.close();
-                }
-                logger.info("connect succeed");
-                break;
-            case SUBACK:
-                logger.info("subscribe succeed");
-                break;
-            case PUBLISH:
-                MqttPublishMessage publishMessage = (MqttPublishMessage) msg;
-                logger.info("topic:{}, info:{}",
-                        publishMessage.variableHeader().topicName(),
-                        new String(ByteBufUtil.getReadableBytes(publishMessage.payload())));
-                break;
-            case PINGRESP:
-                logger.info("heartbeat!!!");
-                break;
-            default:
-                throw new Exception(String.format("unhandled message type: %s", msg.fixedHeader().messageType()));
-        }
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
-        logger.error("MqttHandler error", cause);
-    }
-
-    public void publish(String topic, String message) {
+    private void publish(ChannelHandlerContext ctx, String topic, String message) {
         MqttFixedHeader fixedHeader = new MqttFixedHeader(
                 MqttMessageType.PUBLISH,
                 false,
@@ -130,15 +114,12 @@ public class MqttHandler extends SimpleChannelInboundHandler<MqttMessage> {
         MqttPublishMessage publishMessage = new MqttPublishMessage(
                 fixedHeader,
                 variableHeader,
-                this.channel
-                        .alloc()
-                        .buffer()
-                        .writeBytes(message.getBytes(StandardCharsets.UTF_8))
+                ctx.alloc().buffer().writeBytes(message.getBytes(StandardCharsets.UTF_8))
         );
-        this.channel.writeAndFlush(publishMessage);
+        ctx.writeAndFlush(publishMessage);
     }
 
-    public void subscribe(String topic, MqttQoS qos) {
+    private void subscribe(ChannelHandlerContext ctx, String topic, MqttQoS qos) {
         MqttFixedHeader fixedHeader = new MqttFixedHeader(
                 MqttMessageType.SUBSCRIBE,
                 false,
@@ -151,6 +132,18 @@ public class MqttHandler extends SimpleChannelInboundHandler<MqttMessage> {
                 Collections.singletonList(new MqttTopicSubscription(topic, qos))
         );
         MqttSubscribeMessage subscribeMessage = new MqttSubscribeMessage(fixedHeader, variableHeader, payload);
-        this.channel.writeAndFlush(subscribeMessage);
+        ctx.writeAndFlush(subscribeMessage);
+    }
+
+    private void ping(ChannelHandlerContext ctx) {
+        logger.info("ping server");
+        MqttFixedHeader header = new MqttFixedHeader(
+                MqttMessageType.PINGREQ,
+                false,
+                MqttQoS.AT_MOST_ONCE,
+                false,
+                0
+        );
+        ctx.writeAndFlush(new MqttMessage(header));
     }
 }

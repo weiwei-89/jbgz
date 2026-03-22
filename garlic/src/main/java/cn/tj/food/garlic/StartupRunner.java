@@ -90,17 +90,17 @@ public class StartupRunner implements ApplicationRunner {
                                             new ChannelInboundHandlerAdapter() {
                                                 @Override
                                                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                                                    super.userEventTriggered(ctx, evt);
                                                     if(evt instanceof Heartbeater.HeartbeatEvent) {
 //                                                        logger.info("tick......");
                                                     }
-                                                    super.userEventTriggered(ctx, evt);
                                                 }
 
                                                 @Override
                                                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                                    super.channelActive(ctx);
                                                     Session session = new Session();
                                                     session.setChannel(ctx.channel());
-                                                    super.channelActive(ctx);
                                                 }
 
                                                 @Override
@@ -127,7 +127,7 @@ public class StartupRunner implements ApplicationRunner {
     private static class ScanningProcessor implements Processor {
         private static final Logger logger = LoggerFactory.getLogger(ScanningProcessor.class);
         private static final String APP_BASE_FOLDER_PATH = "D:\\edward\\test\\pandora\\event-bus\\app";
-        private static final Connector<User, Channel> connector = new Connector<User, Channel>(Client.build()) {
+        private static final Connector<User, Channel, ClientSession<Channel>> connector = new Connector<User, Channel, ClientSession<Channel>>(Client.build()) {
             @Override
             protected ClientSession<Channel> buildSession(TcpClient<Channel> client) throws Exception {
                 return cn.tj.food.netty_ext.client.Session.create(client);
@@ -204,7 +204,7 @@ public class StartupRunner implements ApplicationRunner {
         }
 
         private void handleEvent(File file) throws Exception {
-            SessionFuture future = connector.send(this.config, this.user, "hello");
+            SessionFuture future = connector.getSession(this.config, this.user).send("hello");
             future.addListener(new FutureListener() {
                 @Override
                 public void onComplete() throws Exception {

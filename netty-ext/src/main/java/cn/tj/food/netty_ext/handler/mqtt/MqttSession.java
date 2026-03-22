@@ -10,14 +10,15 @@ public class MqttSession extends Session {
         super(client);
     }
 
-    // TODO 使用事件传播机制
+    public void login(String clientId, String userName, String password) {
+        this.connection.pipeline().fireUserEventTriggered(new MqttLoginEvent(clientId, userName, password));
+    }
+
     public void publish(String topic, String message) {
-        MqttHandler mqttHandler = this.connection.pipeline().get(MqttHandler.class);
-        mqttHandler.publish(topic, message);
+        this.connection.pipeline().fireUserEventTriggered(new MqttPublishEvent(topic, message));
     }
 
     public void subscribe(String topic, MqttQoS qos) {
-        MqttHandler mqttHandler = this.connection.pipeline().get(MqttHandler.class);
-        mqttHandler.subscribe(topic, qos);
+        this.connection.pipeline().fireUserEventTriggered(new MqttSubscribeEvent(topic, qos));
     }
 }

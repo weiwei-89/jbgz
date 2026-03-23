@@ -15,6 +15,7 @@
         <module>sauce</module>
         <module>garlic</module>
         <module>test</module>
+        <module>framework</module>
     </modules>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>

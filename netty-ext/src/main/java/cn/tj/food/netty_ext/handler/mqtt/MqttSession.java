@@ -1,5 +1,6 @@
 package cn.tj.food.netty_ext.handler.mqtt;
 
+import cn.tj.food.common.tcp.EventListener;
 import cn.tj.food.common.tcp.TcpClient;
 import cn.tj.food.netty_ext.client.Session;
 import io.netty.channel.Channel;
@@ -20,5 +21,18 @@ public class MqttSession extends Session {
 
     public void subscribe(String topic, MqttQoS qos) {
         this.connection.pipeline().fireUserEventTriggered(new MqttSubscribeEvent(topic, qos));
+    }
+
+    private EventListener reloginListener;
+
+    public void addReloginListener(EventListener listener) {
+        this.reloginListener = listener;
+    }
+
+    public void relogin() throws Exception {
+        if(this.reloginListener == null) {
+            return;
+        }
+        this.reloginListener.process();
     }
 }

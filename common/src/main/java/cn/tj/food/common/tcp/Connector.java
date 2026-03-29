@@ -24,8 +24,11 @@ public abstract class Connector<USER, CNT, S extends ClientSession<CNT>> {
         String sessionId = this.generateId(config, user);
         logger.info("establish new session...... [session_id:{}](1st)", sessionId);
         S session = this.buildSession(this.client);
-        session.connect(config);
-        sessions.putIfAbsent(sessionId, session);
+        try {
+            session.connect(config);
+        } finally {
+            this.sessions.putIfAbsent(sessionId, session);
+        }
     }
 
     public void disconnect(Config config, USER user) throws Exception {

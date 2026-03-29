@@ -16,7 +16,8 @@ public abstract class MqttConnector extends Connector<User, Channel, AutoClientS
         ) {
             @Override
             protected void reconnectDone(Config config) throws Exception {
-
+                MqttSession session = this.getSession();
+                session.relogin();
             }
         };
     }

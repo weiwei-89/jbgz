@@ -5,14 +5,21 @@ import cn.tj.food.common.FileWriter;
 import cn.tj.food.common.task.SimpleProcessor;
 import cn.tj.food.common.task.TaskPool;
 import cn.tj.food.common.tcp.*;
+import cn.tj.food.framework.ConfReader;
+import cn.tj.food.framework.DriverInitializer;
 import cn.tj.food.netty_ext.client.Client;
 import cn.tj.food.netty_ext.client.Session;
+import cn.tj.food.netty_ext.handler.mqtt.MqttDriver;
+import cn.tj.food.netty_ext.handler.mqtt.MqttSession;
 import io.netty.channel.Channel;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TcpAppTest {
     private static final Logger logger = LoggerFactory.getLogger(TcpAppTest.class);
@@ -38,6 +45,22 @@ public class TcpAppTest {
         User user = new User();
         user.setName("edward");
         user.setPassword("123456");
+        ConfReader confReader = new ConfReader();
+        confReader.readFromRoot("jbgz.conf");
+        List<ConfReader.Config> configList = confReader.getConfigList();
+        Map<String, String> mqttConfigMap = configList.stream()
+                .filter(c -> c.getKey().startsWith("driver.mqtt"))
+                .collect(
+                        Collectors.toMap(
+                                c -> c.getKey().substring("driver.mqtt.".length()),
+                                ConfReader.Config::getValue,
+                                (c1, c2) -> c1
+                        )
+                );
+        DriverInitializer driverInitializer = new DriverInitializer("cn.tj.food.netty_ext.handler");
+        driverInitializer.load();
+        MqttDriver mqttDriver = driverInitializer.getInstance("mqtt3.1.1", MqttDriver.class);
+        MqttSession mqttSession = mqttDriver.connect(mqttConfigMap);
         Connector<User, Channel, AutoClientSession<Channel, Session>> connector = new Connector<User, Channel, AutoClientSession<Channel, Session>>(Client.build()) {
             @Override
             protected AutoClientSession<Channel, Session> buildSession(TcpClient<Channel> client) throws Exception {

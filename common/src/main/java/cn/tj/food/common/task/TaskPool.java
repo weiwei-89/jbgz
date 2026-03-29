@@ -42,6 +42,10 @@ public class TaskPool {
         return TaskPool.SingletonHolder.INSTANCE;
     }
 
+    public ScheduledExecutorService getPool() {
+        return this.pool;
+    }
+
     public void addGeneralTask(String taskName, Processor processor) throws Exception {
         this.addTask(
                 taskName,

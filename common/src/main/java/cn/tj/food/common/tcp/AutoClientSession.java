@@ -1,5 +1,6 @@
 package cn.tj.food.common.tcp;
 
+import cn.tj.food.common.task.Processor;
 import cn.tj.food.common.task.ScheduledTask;
 import cn.tj.food.common.task.SimpleProcessor;
 import cn.tj.food.common.task.TaskPool;
@@ -24,9 +25,40 @@ public abstract class AutoClientSession<CNT, S extends ClientSession<CNT>> exten
     private void addListener(Config config) throws Exception {
         this.taskPool.addScheduledTask(
                 RETRY_TASK_NAME,
-                new IsActiveProcessor<>(this, config),
-                this.interval
+                new TcpScheduledTask(
+                        new IsActiveProcessor<>(this, config),
+                        this.interval,
+                        this
+                )
         );
+    }
+
+    private class TcpScheduledTask extends ScheduledTask {
+        private final ClientSessionAdapter<CNT, S> session;
+
+        public TcpScheduledTask(
+                Processor processor,
+                long interval,
+                ClientSessionAdapter<CNT, S> session
+        ) {
+            super(processor, TaskPool.getInstance().getPool(), interval);
+            this.session = session;
+        }
+
+        @Override
+        protected void error(Throwable cause) {
+            super.error(cause);
+            try {
+                this.session.getSession().close();
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        protected void beforeNext(boolean result) throws Exception {
+
+        }
     }
 
     private static class IsActiveProcessor<CNT> extends SimpleProcessor {

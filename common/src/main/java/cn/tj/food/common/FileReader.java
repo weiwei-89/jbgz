@@ -2,6 +2,7 @@ package cn.tj.food.common;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
@@ -17,11 +18,15 @@ public class FileReader {
     }
 
     public String read(String path) throws Exception {
+        return this.read(new FileInputStream(path));
+    }
+
+    public String read(InputStream in) throws Exception {
         BufferedReader reader = null;
         try {
             reader = new BufferedReader(
                     new InputStreamReader(
-                            new FileInputStream(path),
+                            in,
                             StandardCharsets.UTF_8
                     )
             );

@@ -1,4 +1,4 @@
-package cn.tj.food;
+package cn.tj.food.framework;
 
 public class Main {
     public static void main(String[] args) {

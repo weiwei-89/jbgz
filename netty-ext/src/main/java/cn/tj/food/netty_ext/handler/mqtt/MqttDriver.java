@@ -11,7 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
-@Driver(name="mqtt3.1.1")
+@Driver(protocol="mqtt3.1.1")
 public class MqttDriver implements TcpDriver {
     private static final String PARAM_HOST = "host";
     private static final String PARAM_PORT = "port";

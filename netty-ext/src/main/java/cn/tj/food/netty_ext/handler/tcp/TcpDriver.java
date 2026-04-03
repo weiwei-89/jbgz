@@ -13,7 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
-@Driver(name="tcp1.0")
+@Driver(protocol="tcp1.0")
 public class TcpDriver implements cn.tj.food.framework.TcpDriver {
     private static final String PARAM_HOST = "host";
     private static final String PARAM_PORT = "port";

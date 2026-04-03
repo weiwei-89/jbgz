@@ -37,7 +37,7 @@ public class DriverInitializer {
             }
             Driver driverAnnotation = driverClass.getAnnotation(Driver.class);
             Object driverInstance = driverClass.getDeclaredConstructor().newInstance();
-            this.instanceCache.putIfAbsent(driverAnnotation.name(), TcpDriver.class.cast(driverInstance));
+            this.instanceCache.putIfAbsent(driverAnnotation.protocol(), TcpDriver.class.cast(driverInstance));
         }
     }
 

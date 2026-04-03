@@ -16,24 +16,36 @@ import java.util.Set;
 
 public class Initializer {
     private static final Logger logger = LoggerFactory.getLogger(Initializer.class);
+    private static final String CONF_FILE_NAME = "jbgz.conf";
 
     private final String[] packages;
-    private DriverInitializer driverInitializer;
 
     public Initializer(String[] packages) {
         this.packages = packages;
     }
 
     public void start() throws Exception {
+        this.loadConfigs();
+        this.loadDrivers();
         this.scan();
     }
 
-    private void scan() throws Exception {
+    private ConfReader confReader;
+
+    private void loadConfigs() throws Exception {
+        this.confReader = new ConfReader();
+        this.confReader.readFromRoot(CONF_FILE_NAME);
+    }
+
+    private DriverInitializer driverInitializer;
+
+    private void loadDrivers() throws Exception {
         this.driverInitializer = new DriverInitializer(this.packages);
         this.driverInitializer.load();
-        ConfReader confReader = new ConfReader();
-        confReader.readFromRoot("jbgz.conf");
-        List<ConfReader.Config> configList = confReader.getConfigList();
+    }
+
+    private void scan() throws Exception {
+        List<ConfReader.Config> configList = this.confReader.getConfigList();
         Reflections reflections = new Reflections(
                 new ConfigurationBuilder()
                         .forPackages(this.packages)
@@ -70,7 +82,7 @@ public class Initializer {
                 try {
                     session = tcpDriver.connect(configMap);
                 } catch(Exception e) {
-                    e.printStackTrace();
+                    logger.warn("connect failed", e);
                     continue;
                 }
                 jbgzField.setAccessible(true);

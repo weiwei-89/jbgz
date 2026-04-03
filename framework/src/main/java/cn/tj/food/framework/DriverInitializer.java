@@ -9,11 +9,11 @@ import java.util.Map;
 import java.util.Set;
 
 public class DriverInitializer {
-    private final String path;
+    private final String[] packages;
     private final Map<String, TcpDriver> instanceCache = new HashMap<>();
 
-    public DriverInitializer(String path) {
-        this.path = path;
+    public DriverInitializer(String[] packages) {
+        this.packages = packages;
     }
 
     public void load() throws Exception {
@@ -24,7 +24,7 @@ public class DriverInitializer {
     private void scan() throws Exception {
         Reflections reflections = new Reflections(
                 new ConfigurationBuilder()
-                        .forPackages(this.path)
+                        .forPackages(this.packages)
                         .setScanners(Scanners.TypesAnnotated)
         );
         Set<Class<?>> driverClassSet = reflections.getTypesAnnotatedWith(Driver.class);

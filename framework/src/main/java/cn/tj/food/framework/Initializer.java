@@ -1,21 +1,27 @@
 package cn.tj.food.framework;
 
+import cn.tj.food.common.tcp.ClientSession;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
+import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class Initializer {
-    private final String path;
-    private final Map<Class<?>, Object> instanceCache = new HashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(Initializer.class);
 
-    public Initializer(String path) {
-        this.path = path;
+    private final String[] packages;
+    private DriverInitializer driverInitializer;
+
+    public Initializer(String[] packages) {
+        this.packages = packages;
     }
 
     public void start() throws Exception {
@@ -23,9 +29,14 @@ public class Initializer {
     }
 
     private void scan() throws Exception {
+        this.driverInitializer = new DriverInitializer(this.packages);
+        this.driverInitializer.load();
+        ConfReader confReader = new ConfReader();
+        confReader.readFromRoot("jbgz.conf");
+        List<ConfReader.Config> configList = confReader.getConfigList();
         Reflections reflections = new Reflections(
                 new ConfigurationBuilder()
-                        .forPackages(this.path)
+                        .forPackages(this.packages)
                         .setScanners(Scanners.TypesAnnotated)
         );
         Set<Class<?>> jbgzClassSet = reflections.getTypesAnnotatedWith(Jbgz.class);
@@ -33,8 +44,7 @@ public class Initializer {
             return;
         }
         for(Class<?> clazz : jbgzClassSet) {
-//            Jbgz jbgzAnnotation = clazz.getAnnotation(Jbgz.class);
-            Object jbgzInstance = clazz.getDeclaredConstructor().newInstance();
+            Jbgz jbgzAnnotation = clazz.getAnnotation(Jbgz.class);
             Field[] jbgzFields = clazz.getDeclaredFields();
             if(jbgzFields==null || jbgzFields.length==0) {
                 continue;
@@ -48,18 +58,24 @@ public class Initializer {
                 if(StringUtils.isBlank(protocol)) {
                     continue;
                 }
-                if(protocol.equals("mqtt")) {
-                    jbgzField.setAccessible(true);
-                    Class<?> mqttConnectorClass = Class.forName("cn.tj.food.netty_ext.handler.mqtt.MqttConnector");
-                    Object mqttConnectorInstance = mqttConnectorClass.getDeclaredConstructor().newInstance();
-                    jbgzField.set(jbgzInstance, mqttConnectorInstance);
+                if(!Modifier.isStatic(jbgzField.getModifiers())) {
+                    continue;
                 }
+                TcpDriver tcpDriver = this.driverInitializer.getInstance(protocol, TcpDriver.class);
+                if(tcpDriver == null) {
+                    logger.warn("driver not found [name:{}]", protocol);
+                }
+                Map<String, String> configMap = ConfReader.queryConfig(configList, jbgzAnnotation.configPrefix(), tcpClientAnnotation.name());
+                ClientSession<?> session;
+                try {
+                    session = tcpDriver.connect(configMap);
+                } catch(Exception e) {
+                    e.printStackTrace();
+                    continue;
+                }
+                jbgzField.setAccessible(true);
+                jbgzField.set(null, session);
             }
-            this.instanceCache.put(clazz, jbgzInstance);
         }
-    }
-
-    public <T> T getInstance(Class<T> clazz) {
-        return clazz.cast(this.instanceCache.get(clazz));
     }
 }

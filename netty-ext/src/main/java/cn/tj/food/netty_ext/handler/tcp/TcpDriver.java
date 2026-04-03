@@ -1,4 +1,4 @@
-package cn.tj.food.netty_ext.handler.mqtt;
+package cn.tj.food.netty_ext.handler.tcp;
 
 import cn.tj.food.common.task.SimpleProcessor;
 import cn.tj.food.common.task.TaskPool;
@@ -6,13 +6,15 @@ import cn.tj.food.common.tcp.Config;
 import cn.tj.food.common.tcp.EventListener;
 import cn.tj.food.common.tcp.User;
 import cn.tj.food.framework.Driver;
-import cn.tj.food.framework.TcpDriver;
+import cn.tj.food.netty_ext.handler.mqtt.DefaultMqttConnector;
+import cn.tj.food.netty_ext.handler.mqtt.MqttConnector;
+import cn.tj.food.netty_ext.handler.mqtt.MqttSession;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
-@Driver(name="mqtt3.1.1")
-public class MqttDriver implements TcpDriver {
+@Driver(name="tcp1.0")
+public class TcpDriver implements cn.tj.food.framework.TcpDriver {
     private static final String PARAM_HOST = "host";
     private static final String PARAM_PORT = "port";
     private static final String PARAM_CLIENT_ID = "client-id";
@@ -20,16 +22,16 @@ public class MqttDriver implements TcpDriver {
     private static final String PARAM_PASSWORD = "password";
     private static final long HEARTBEAT = 10*1000;
 
-    private MqttConnector connector;
+    private TcpConnector connector;
     private final TaskPool taskPool = TaskPool.getInstance();
 
     @Override
     public void init() throws Exception {
-        this.connector = new DefaultMqttConnector(HEARTBEAT);
+        this.connector = new DefaultTcpConnector(HEARTBEAT);
     }
 
     @Override
-    public MqttSession connect(Map<String, String> param) throws Exception {
+    public TcpSession connect(Map<String, String> param) throws Exception {
         String host = param.get(PARAM_HOST);
         if(StringUtils.isBlank(host)) {
             throw new Exception("host is blank");
@@ -55,7 +57,7 @@ public class MqttDriver implements TcpDriver {
         config.setPort(Integer.parseInt(port));
         User user = new User();
         user.setName(clientId);
-        MqttSession session = this.connector.connect(config, user).getSession();
+        TcpSession session = this.connector.connect(config, user).getSession();
         LoginInfo loginInfo = new LoginInfo(clientId, userName, password);
         session.addReloginListener(new EventListener() {
             @Override
@@ -69,7 +71,7 @@ public class MqttDriver implements TcpDriver {
 
     @FunctionalInterface
     private interface LoginFunction {
-        void apply(MqttSession session, LoginInfo loginInfo) throws Exception;
+        void apply(TcpSession session, LoginInfo loginInfo) throws Exception;
     }
 
     private final LoginFunction loginFunction = (session, loginInfo) -> {
@@ -106,11 +108,11 @@ public class MqttDriver implements TcpDriver {
     }
 
     private static class LoginProcessor extends SimpleProcessor {
-        private final MqttSession session;
+        private final TcpSession session;
         private final LoginInfo loginInfo;
 
         public LoginProcessor(
-                MqttSession session,
+                TcpSession session,
                 LoginInfo loginInfo
         ) {
             this.session = session;

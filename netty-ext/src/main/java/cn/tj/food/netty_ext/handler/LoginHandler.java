@@ -1,5 +1,8 @@
 package cn.tj.food.netty_ext.handler;
 
+import cn.tj.food.netty_ext.handler.tcp.LoginInfo;
+import cn.tj.food.netty_ext.handler.tcp.TcpMessage;
+import com.alibaba.fastjson2.JSON;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -7,10 +10,9 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class LoginHandler extends MessageToMessageDecoder<String> {
+public class LoginHandler extends MessageToMessageDecoder<LoginInfo> {
     private static final Logger logger = LoggerFactory.getLogger(LoginHandler.class);
 
     @Override
@@ -19,18 +21,13 @@ public class LoginHandler extends MessageToMessageDecoder<String> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, String msg, List<Object> out) throws Exception {
-        logger.info("login_info: {}", msg);
-        if(this.login()) {
+    protected void decode(ChannelHandlerContext ctx, LoginInfo msg, List<Object> out) throws Exception {
+        logger.info("login_info: {}", JSON.toJSONString(msg));
+        if(this.login(msg)) {
 
         } else {
             logger.info("login failed");
-            ChannelFuture future = ctx.writeAndFlush(
-                    ctx.channel()
-                            .alloc()
-                            .buffer()
-                            .writeBytes("login failed".getBytes(StandardCharsets.UTF_8))
-            );
+            ChannelFuture future = ctx.writeAndFlush(new TcpMessage("login failed"));
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -46,7 +43,7 @@ public class LoginHandler extends MessageToMessageDecoder<String> {
         logger.error("LoginHandler error", cause);
     }
 
-    private boolean login() {
+    private boolean login(LoginInfo loginInfo) {
         return false;
     }
 }

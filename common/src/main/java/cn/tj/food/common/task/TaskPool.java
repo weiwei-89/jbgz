@@ -82,6 +82,7 @@ public class TaskPool {
     }
 
     private void addTask(String taskName, TaskProcessor<?> processor) throws Exception {
+        taskName = String.format("%s@%s", taskName, String.valueOf(System.currentTimeMillis()));
         if(this.taskMap.containsKey(taskName)) {
             logger.info("task exists [{}]", taskName);
             return;
@@ -97,14 +98,15 @@ public class TaskPool {
                 logger.info("task exists [{}]", taskName);
                 return;
             }
+            final String taskName0 = taskName;
             this.pool.submit(
                     new GeneralTask(processor) {
                         @Override
                         protected void done(boolean result) {
                             rwLock.writeLock().lock();
                             try {
-                                taskMap.remove(taskName);
-                                logger.info("task removed [{}]", taskName);
+                                taskMap.remove(taskName0);
+                                logger.info("task removed [{}]", taskName0);
                             } finally {
                                 rwLock.writeLock().unlock();
                             }

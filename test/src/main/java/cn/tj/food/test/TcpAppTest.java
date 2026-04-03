@@ -5,21 +5,16 @@ import cn.tj.food.common.FileWriter;
 import cn.tj.food.common.task.SimpleProcessor;
 import cn.tj.food.common.task.TaskPool;
 import cn.tj.food.common.tcp.*;
-import cn.tj.food.framework.ConfReader;
-import cn.tj.food.framework.DriverInitializer;
-import cn.tj.food.netty_ext.client.Client;
-import cn.tj.food.netty_ext.client.Session;
-import cn.tj.food.netty_ext.handler.mqtt.MqttDriver;
+import cn.tj.food.framework.Initializer;
+import cn.tj.food.netty_ext.handler.mqtt.MqttEventListener;
 import cn.tj.food.netty_ext.handler.mqtt.MqttSession;
-import io.netty.channel.Channel;
+import cn.tj.food.netty_ext.handler.tcp.TcpSession;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class TcpAppTest {
     private static final Logger logger = LoggerFactory.getLogger(TcpAppTest.class);
@@ -44,47 +39,35 @@ public class TcpAppTest {
         config.setPort(serverPort);
         User user = new User();
         user.setName("edward");
-        user.setPassword("123456");
-        ConfReader confReader = new ConfReader();
-        confReader.readFromRoot("jbgz.conf");
-        List<ConfReader.Config> configList = confReader.getConfigList();
-        Map<String, String> mqttConfigMap = configList.stream()
-                .filter(c -> c.getKey().startsWith("driver.mqtt"))
-                .collect(
-                        Collectors.toMap(
-                                c -> c.getKey().substring("driver.mqtt.".length()),
-                                ConfReader.Config::getValue,
-                                (c1, c2) -> c1
-                        )
-                );
-        DriverInitializer driverInitializer = new DriverInitializer("cn.tj.food.netty_ext.handler");
-        driverInitializer.load();
-        MqttDriver mqttDriver = driverInitializer.getInstance("mqtt3.1.1", MqttDriver.class);
-        MqttSession mqttSession = mqttDriver.connect(mqttConfigMap);
-        Connector<User, Channel, AutoClientSession<Channel, Session>> connector = new Connector<User, Channel, AutoClientSession<Channel, Session>>(Client.build()) {
+        Initializer initializer = new Initializer(new String[] {"cn.tj.food"});
+        initializer.start();
+        TcpSession tcp1Session = TcpDriverList.getTcp1Session();
+        MqttSession mqtt1Session = MqttDriverList.getMqtt1Session();
+        String topic = "/taian/device/status";
+        subscribeFunction.apply(mqtt1Session, topic);
+        mqtt1Session.addAfterLoginListener(new EventListener() {
             @Override
-            protected AutoClientSession<Channel, Session> buildSession(TcpClient<Channel> client) throws Exception {
-                return new AutoClientSession<Channel, Session>(
-                        Session.create(client),
-                        10*1000
-                ) {
-                    @Override
-                    protected void reconnectDone(Config config) throws Exception {
-
-                    }
-                };
+            public void process() throws Exception {
+                subscribeFunction.apply(mqtt1Session, topic);
             }
-
+        });
+        mqtt1Session.addEventListener(new MqttEventListener() {
             @Override
-            protected String generateId(Config config, User user) {
-                return String.format("%s:%d-%s", config.getHost(), config.getPort(), user.getName());
+            protected void publish(String topic, String message) throws Exception {
+                logger.info("mqtt message: {} [topic:{}]", message, topic);
             }
-        };
+        });
         FileWriter.write("running".getBytes(), ROOT_PATH, RUN_FILE_NAME);
         logger.info("tcp app started");
-        taskPool.addGeneralTask(
-                "connect",
-                new ConnectProcessor(connector, config, user)
+        taskPool.addScheduledTask(
+                "tcp[send-hello]",
+                new SendHelloToTcpProcessor(tcp1Session, "hello world!!!"),
+                5*1000
+        );
+        taskPool.addScheduledTask(
+                "mqtt[send-hello]",
+                new SendHelloToMqttProcessor(mqtt1Session, "/taian/device/control", "hello world!!!"),
+                5*1000
         );
         Runtime.getRuntime()
                 .addShutdownHook(
@@ -108,30 +91,9 @@ public class TcpAppTest {
                 TcpAppTest.client.wait();
             }
         }
-        connector.disconnect(config, user);
-        connector.close();
+//        connector.disconnect(config, user);
+//        connector.close();
         logger.info("stopped");
-    }
-
-    private static class ConnectProcessor extends SimpleProcessor {
-        private final Connector<User, Channel, AutoClientSession<Channel, Session>> connector;
-        private final Config config;
-        private final User user;
-
-        public ConnectProcessor(
-                Connector<User, Channel, AutoClientSession<Channel, Session>> connector,
-                Config config,
-                User user
-        ) {
-            this.connector = connector;
-            this.config = config;
-            this.user = user;
-        }
-
-        @Override
-        public void process() throws Exception {
-            this.connector.connect(this.config, this.user);
-        }
     }
 
     private static class ShutdownProcessor extends SimpleProcessor {
@@ -151,6 +113,72 @@ public class TcpAppTest {
                 TcpAppTest.running = false;
                 TcpAppTest.client.notifyAll();
             }
+        }
+    }
+
+    private static class SendHelloToTcpProcessor extends SimpleProcessor {
+        private final TcpSession tcpSession;
+        private final String message;
+
+        public SendHelloToTcpProcessor(
+                TcpSession tcpSession,
+                String message
+        ) {
+            this.tcpSession = tcpSession;
+            this.message = message;
+        }
+
+        @Override
+        public void process() throws Exception {
+            this.tcpSession.sendMessage(this.message);
+        }
+    }
+
+    private static class SendHelloToMqttProcessor extends SimpleProcessor {
+        private final MqttSession mqttSession;
+        private final String topic;
+        private final String message;
+
+        public SendHelloToMqttProcessor(
+                MqttSession mqttSession,
+                String topic,
+                String message
+        ) {
+            this.mqttSession = mqttSession;
+            this.topic = topic;
+            this.message = message;
+        }
+
+        @Override
+        public void process() throws Exception {
+            this.mqttSession.publish(this.topic, this.message);
+        }
+    }
+
+    @FunctionalInterface
+    private interface SubscribeFunction {
+        void apply(MqttSession mqttSession, String topic) throws Exception;
+    }
+
+    private static final SubscribeFunction subscribeFunction = (session, topic) -> {
+        taskPool.addGeneralTask(
+                "subscribe",
+                new SubscribeProcessor(session, topic)
+        );
+    };
+
+    private static class SubscribeProcessor extends SimpleProcessor {
+        private final MqttSession session;
+        private final String topic;
+
+        public SubscribeProcessor(MqttSession session, String topic) {
+            this.session = session;
+            this.topic = topic;
+        }
+
+        @Override
+        public void process() throws Exception {
+            this.session.subscribe(this.topic, MqttQoS.AT_MOST_ONCE);
         }
     }
 }

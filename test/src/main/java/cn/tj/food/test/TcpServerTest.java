@@ -56,10 +56,10 @@ public class TcpServerTest {
                                 )
                                 .addLast(statusHandler)
                                 .addLast(new Appender("\r\n".getBytes()))
-                                .addLast(new Heartbeater(100L))
+//                                .addLast(new Heartbeater(100L))
         //                        .addLast(new FrameDecoder(new byte[]{0x3D}, 8))
                                 .addLast(new LineBasedFrameDecoder(512))
-                                .addLast(stringMessageConvertor)
+//                                .addLast(stringMessageConvertor)
                                 .addLast(new LoginHandler());
 //                                .addLast(
 //                                        new ChannelInboundHandlerAdapter() {

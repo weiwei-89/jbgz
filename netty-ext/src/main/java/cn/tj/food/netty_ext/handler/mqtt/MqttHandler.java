@@ -14,6 +14,12 @@ import java.util.Collections;
 public class MqttHandler extends SimpleChannelInboundHandler<MqttMessage> {
     private static final Logger logger = LoggerFactory.getLogger(MqttHandler.class);
 
+    private MqttEventListener eventListener;
+
+    public void addEventListener(MqttEventListener eventListener) {
+        this.eventListener = eventListener;
+    }
+
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         logger.info("MqttHandler added");
@@ -55,12 +61,14 @@ public class MqttHandler extends SimpleChannelInboundHandler<MqttMessage> {
                 break;
             case PUBLISH:
                 MqttPublishMessage publishMessage = (MqttPublishMessage) msg;
-                logger.info("topic:{}, info:{}",
-                        publishMessage.variableHeader().topicName(),
-                        new String(ByteBufUtil.getReadableBytes(publishMessage.payload())));
+                String topic = publishMessage.variableHeader().topicName();
+                String message = new String(ByteBufUtil.getReadableBytes(publishMessage.payload()));
+                if(this.eventListener != null) {
+                    this.eventListener.publish(topic, message);
+                }
                 break;
             case PINGRESP:
-                logger.info("ping succeed");
+                logger.debug("ping succeed");
                 break;
             default:
                 throw new Exception(String.format("unhandled message type: %s", msg.fixedHeader().messageType()));
@@ -136,7 +144,7 @@ public class MqttHandler extends SimpleChannelInboundHandler<MqttMessage> {
     }
 
     private void ping(ChannelHandlerContext ctx) {
-        logger.info("ping server");
+        logger.debug("ping server");
         MqttFixedHeader header = new MqttFixedHeader(
                 MqttMessageType.PINGREQ,
                 false,

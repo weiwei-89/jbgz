@@ -6,5 +6,6 @@ import java.lang.annotation.*;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface TcpClient {
-    String protocol() default "";
+    String protocol();
+    String name();
 }

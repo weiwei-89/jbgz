@@ -7,4 +7,5 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Jbgz {
     String value() default "";
+    String configPrefix() default "";
 }

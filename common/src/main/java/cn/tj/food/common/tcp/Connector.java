@@ -20,15 +20,18 @@ public abstract class Connector<USER, CNT, S extends ClientSession<CNT>> {
 
     protected abstract String generateId(Config config, USER user);
 
-    public void connect(Config config, USER user) throws Exception {
+    public S connect(Config config, USER user) throws Exception {
         String sessionId = this.generateId(config, user);
         logger.info("establish new session...... [session_id:{}](1st)", sessionId);
         S session = this.buildSession(this.client);
         try {
             session.connect(config);
+        } catch(Exception e) {
+            logger.warn(String.format("connect failed [session_id:%s]", sessionId), e);
         } finally {
             this.sessions.putIfAbsent(sessionId, session);
         }
+        return session;
     }
 
     public void disconnect(Config config, USER user) throws Exception {

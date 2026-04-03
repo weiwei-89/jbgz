@@ -35,4 +35,22 @@ public class MqttSession extends Session {
         }
         this.reloginListener.process();
     }
+
+    private EventListener afterLoginListener;
+
+    public void addAfterLoginListener(EventListener listener) {
+        this.afterLoginListener = listener;
+    }
+
+    public void afterLogin() throws Exception {
+        if(this.afterLoginListener == null) {
+            return;
+        }
+        this.afterLoginListener.process();
+    }
+
+    public void addEventListener(MqttEventListener eventListener) {
+        MqttHandler mqttHandler = this.connection.pipeline().get(MqttHandler.class);
+        mqttHandler.addEventListener(eventListener);
+    }
 }

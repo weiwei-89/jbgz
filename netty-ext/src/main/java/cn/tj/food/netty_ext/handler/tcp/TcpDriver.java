@@ -6,9 +6,6 @@ import cn.tj.food.common.tcp.Config;
 import cn.tj.food.common.tcp.EventListener;
 import cn.tj.food.common.tcp.User;
 import cn.tj.food.framework.Driver;
-import cn.tj.food.netty_ext.handler.mqtt.DefaultMqttConnector;
-import cn.tj.food.netty_ext.handler.mqtt.MqttConnector;
-import cn.tj.food.netty_ext.handler.mqtt.MqttSession;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;

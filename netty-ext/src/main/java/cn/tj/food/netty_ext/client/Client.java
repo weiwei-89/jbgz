@@ -7,6 +7,7 @@ import cn.tj.food.netty_ext.handler.StringPrinter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -38,6 +39,7 @@ public class Client implements TcpClient<Channel> {
     private void init(ChannelInitializer<? extends SocketChannel> initializer) {
         this.group = new NioEventLoopGroup();
         this.bootstrap = new Bootstrap();
+        this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000);
         this.bootstrap.group(this.group)
                 .channel(NioSocketChannel.class)
                 .handler(initializer==null?this.defaultInitializer():initializer);

@@ -76,6 +76,7 @@ public class Initializer {
                 TcpDriver tcpDriver = this.driverInitializer.getInstance(protocol, TcpDriver.class);
                 if(tcpDriver == null) {
                     logger.warn("driver not found [name:{}]", protocol);
+                    continue;
                 }
                 Map<String, String> configMap = ConfReader.queryConfig(configList, jbgzAnnotation.configPrefix(), tcpClientAnnotation.name());
                 ClientSession<?> session;

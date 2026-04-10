@@ -84,4 +84,8 @@ public class Session implements ClientSession<Channel> {
     public static Session create(TcpClient<Channel> client) throws Exception {
         return new Session(client);
     }
+
+    public Channel getConnection() {
+        return this.connection;
+    }
 }

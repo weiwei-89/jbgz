@@ -63,7 +63,7 @@ public class MqttDriver implements TcpDriver {
                 loginFunction.apply(session, loginInfo);
             }
         });
-        this.loginFunction.apply(session, loginInfo);
+//        this.loginFunction.apply(session, loginInfo);
         return session;
     }
 

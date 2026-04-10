@@ -10,7 +10,9 @@ public abstract class ClientSessionAdapter<CNT, S extends ClientSession<CNT>> im
     @Override
     public CNT connect(Config config) throws Exception {
         try {
-            return this.session.connect(config);
+            CNT connection = this.session.connect(config);
+            this.connected();
+            return connection;
         } finally {
             this.connectDone(config);
         }
@@ -42,6 +44,10 @@ public abstract class ClientSessionAdapter<CNT, S extends ClientSession<CNT>> im
 
     public S getSession() {
         return this.session;
+    }
+
+    protected void connected() throws Exception {
+
     }
 
     protected abstract void connectDone(Config config) throws Exception;

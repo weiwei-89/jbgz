@@ -94,10 +94,16 @@ public abstract class AutoClientSession<CNT, S extends ClientSession<CNT>> exten
     @Override
     public CNT reconnect(Config config) throws Exception {
         try {
-            return this.getSession().connect(config);
+            CNT connection = this.getSession().connect(config);
+            this.reconnected();
+            return connection;
         } finally {
             this.reconnectDone(config);
         }
+    }
+
+    protected void reconnected() throws Exception {
+
     }
 
     protected abstract void reconnectDone(Config config) throws Exception;

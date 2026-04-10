@@ -11,15 +11,24 @@ public class MqttSession extends Session {
         super(client);
     }
 
-    public void login(String clientId, String userName, String password) {
+    public void login(String clientId, String userName, String password) throws Exception {
+        if(!this.isActive()) {
+            throw new Exception("login failed [session inactivated]");
+        }
         this.connection.pipeline().fireUserEventTriggered(new MqttLoginEvent(clientId, userName, password));
     }
 
-    public void publish(String topic, String message) {
+    public void publish(String topic, String message) throws Exception {
+        if(!this.isActive()) {
+            throw new Exception("publish failed [session inactivated]");
+        }
         this.connection.pipeline().fireUserEventTriggered(new MqttPublishEvent(topic, message));
     }
 
-    public void subscribe(String topic, MqttQoS qos) {
+    public void subscribe(String topic, MqttQoS qos) throws Exception {
+        if(!this.isActive()) {
+            throw new Exception("subscribe failed [session inactivated]");
+        }
         this.connection.pipeline().fireUserEventTriggered(new MqttSubscribeEvent(topic, qos));
     }
 
@@ -36,21 +45,13 @@ public class MqttSession extends Session {
         this.reloginListener.process();
     }
 
-    private EventListener afterLoginListener;
-
-    public void addAfterLoginListener(EventListener listener) {
-        this.afterLoginListener = listener;
-    }
-
-    public void afterLogin() throws Exception {
-        if(this.afterLoginListener == null) {
-            return;
-        }
-        this.afterLoginListener.process();
-    }
+    private MqttEventListener eventListener;
 
     public void addEventListener(MqttEventListener eventListener) {
-        MqttHandler mqttHandler = this.connection.pipeline().get(MqttHandler.class);
-        mqttHandler.addEventListener(eventListener);
+        this.eventListener = eventListener;
+    }
+
+    public MqttEventListener getMqttEventListener() {
+        return this.eventListener;
     }
 }

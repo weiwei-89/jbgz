@@ -15,10 +15,24 @@ public abstract class MqttConnector extends Connector<User, Channel, AutoClientS
                 10*1000
         ) {
             @Override
-            protected void reconnectDone(Config config) throws Exception {
+            protected void connected() throws Exception {
                 MqttSession session = this.getSession();
+                MqttHandler mqttHandler = session.getConnection().pipeline().get(MqttHandler.class);
+                mqttHandler.addEventListener(session.getMqttEventListener());
                 session.relogin();
-                session.afterLogin();
+            }
+
+            @Override
+            protected void reconnected() throws Exception {
+                MqttSession session = this.getSession();
+                MqttHandler mqttHandler = session.getConnection().pipeline().get(MqttHandler.class);
+                mqttHandler.addEventListener(session.getMqttEventListener());
+                session.relogin();
+            }
+
+            @Override
+            protected void reconnectDone(Config config) throws Exception {
+
             }
         };
     }

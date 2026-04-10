@@ -44,19 +44,18 @@ public class TcpAppTest {
         TcpSession tcp1Session = TcpDriverList.getTcp1Session();
         MqttSession mqtt1Session = MqttDriverList.getMqtt1Session();
         String topic = "/taian/device/status";
-        subscribeFunction.apply(mqtt1Session, topic);
-        mqtt1Session.addAfterLoginListener(new EventListener() {
+        mqtt1Session.addEventListener(new MqttEventListener() {
             @Override
-            public void process() throws Exception {
+            protected void afterLogin() throws Exception {
                 subscribeFunction.apply(mqtt1Session, topic);
             }
-        });
-        mqtt1Session.addEventListener(new MqttEventListener() {
+
             @Override
             protected void publish(String topic, String message) throws Exception {
                 logger.info("mqtt message: {} [topic:{}]", message, topic);
             }
         });
+        subscribeFunction.apply(mqtt1Session, topic);
         FileWriter.write("running".getBytes(), ROOT_PATH, RUN_FILE_NAME);
         logger.info("tcp app started");
         taskPool.addScheduledTask(

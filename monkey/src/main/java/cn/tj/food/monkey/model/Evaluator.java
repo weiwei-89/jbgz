@@ -230,6 +230,7 @@ public class Evaluator {
                 exEnv.set(parameter.getValue(), argumentResultList.get(p));
             }
         }
+        // TODO 当前处理的是用户自定义的函数，未来需要可以处理monkey自带的函数
         Element callResult = this.eval(functionElement.getBody(), exEnv);
         if(callResult == null) {
             return NullElement.INSTANCE;

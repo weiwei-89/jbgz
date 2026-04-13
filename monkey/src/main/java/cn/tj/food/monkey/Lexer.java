@@ -1,6 +1,7 @@
 package cn.tj.food.monkey;
 
 import cn.tj.food.monkey.exception.EndOfLineException;
+import cn.tj.food.monkey.exception.IllegalException;
 import cn.tj.food.monkey.model.Token;
 
 public class Lexer {
@@ -44,6 +45,14 @@ public class Lexer {
         return this.input.charAt(nextPosition);
     }
 
+    private void expect(char c) throws Exception {
+        char nextCharacter = this.inspectNext();
+        if(nextCharacter == c) {
+            return;
+        }
+        throw new IllegalException(String.format("expect character \"%s\"", c));
+    }
+
     private boolean isLetter(char c) {
         if(('a'<=c&&c<='z') || ('A'<=c&&c<='Z') || c=='_') {
             return true;
@@ -58,9 +67,16 @@ public class Lexer {
         return false;
     }
 
+    private boolean isQuotes(char c) {
+        if(c == '"') {
+            return true;
+        }
+        return false;
+    }
+
     private String readIdentifier() throws Exception {
         int currentPosition = this.currentPosition;
-        while(this.isLetter(this.inspectNext())) {
+        while(this.isLetter(this.inspectNext()) || this.isDigit(this.inspectNext())) {
             this.read();
         }
         return this.input.substring(currentPosition, this.currentPosition+1);
@@ -69,6 +85,14 @@ public class Lexer {
     private String readNumber() throws Exception {
         int currentPosition = this.currentPosition;
         while(this.isDigit(this.inspectNext())) {
+            this.read();
+        }
+        return this.input.substring(currentPosition, this.currentPosition+1);
+    }
+
+    private String readValueDefinition() throws Exception {
+        int currentPosition = this.currentPosition;
+        while(!this.isQuotes(this.inspectNext())) {
             this.read();
         }
         return this.input.substring(currentPosition, this.currentPosition+1);
@@ -143,6 +167,12 @@ public class Lexer {
                 } else if(this.isDigit(this.currentCharacter)) {
                     String number = this.readNumber();
                     token = new Token(number, Token.Type.INT);
+                } else if(this.isQuotes(this.currentCharacter)) {
+                    this.read();
+                    String valueDefinition = this.readValueDefinition();
+                    this.expect('"');
+                    this.read();
+                    token = new Token(valueDefinition, Token.Type.V_DEF);
                 } else {
                     token = new Token(String.valueOf(this.currentCharacter), Token.Type.ILLEGAL);
                 }

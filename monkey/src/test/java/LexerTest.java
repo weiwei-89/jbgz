@@ -1,4 +1,5 @@
 import cn.tj.food.monkey.Lexer;
+import cn.tj.food.monkey.exception.IllegalException;
 import cn.tj.food.monkey.model.Token;
 import org.junit.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,7 +17,7 @@ public class LexerTest {
         while(true) {
             Token token = lexer.nextToken();
             if(token.getType() == Token.Type.ILLEGAL) {
-                break;
+                throw new IllegalException();
             }
             if(token.getType() == Token.Type.EOF) {
                 break;

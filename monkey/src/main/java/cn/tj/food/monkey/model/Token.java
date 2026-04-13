@@ -22,6 +22,7 @@ public class Token {
 
         IDENT("ident"),
         INT("int"),
+        V_DEF("v_def"),
 
         ASSIGN("="),
         PLUS("+"),

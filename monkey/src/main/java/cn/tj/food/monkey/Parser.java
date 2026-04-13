@@ -1,5 +1,6 @@
 package cn.tj.food.monkey;
 
+import cn.tj.food.monkey.exception.IllegalException;
 import cn.tj.food.monkey.exception.ParseException;
 import cn.tj.food.monkey.function.InfixParseFunction;
 import cn.tj.food.monkey.function.PrefixParseFunction;
@@ -47,6 +48,7 @@ public class Parser {
         this.infixParseFunctionMap.put(Token.Type.ASTERISK, this::parseInfixExpression);
         this.infixParseFunctionMap.put(Token.Type.SLASH, this::parseInfixExpression);
         this.infixParseFunctionMap.put(Token.Type.LPAREN, this::parseCallExpression);
+        this.prefixParseFunctionMap.put(Token.Type.V_DEF, this::parseValueDefinition);
     }
 
     public enum Priority {
@@ -127,7 +129,7 @@ public class Parser {
                 break;
             }
             if(this.currentToken.getType() == Token.Type.ILLEGAL) {
-                continue;
+                throw new IllegalException();
             }
             Statement statement = this.parseStatement();
             if(statement == null) {
@@ -336,5 +338,11 @@ public class Parser {
             expressionList.add(this.parseExpression(Priority.LOWEST.getValue()));
         }
         return expressionList;
+    }
+
+    private Expression parseValueDefinition() throws Exception {
+        ValueDefinitionExpression valueDefinitionExpression = new ValueDefinitionExpression(this.currentToken);
+        valueDefinitionExpression.setValue(this.currentToken.getLiteral());
+        return valueDefinitionExpression;
     }
 }

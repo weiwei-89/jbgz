@@ -28,6 +28,11 @@ public class BlockStatement implements Statement {
     }
 
     @Override
+    public Type type() {
+        return Type.BLOCK;
+    }
+
+    @Override
     public void statementNode() {
 
     }

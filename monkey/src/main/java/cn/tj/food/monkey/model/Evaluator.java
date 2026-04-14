@@ -7,6 +7,7 @@ import cn.tj.food.monkey.model.statement.BlockStatement;
 import cn.tj.food.monkey.model.statement.ExpressionStatement;
 import cn.tj.food.monkey.model.statement.LetStatement;
 import cn.tj.food.monkey.model.statement.ReturnStatement;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,7 @@ public class Evaluator {
     private void registerHandlers() {
         this.register(IntegerExpression.class, this::handleIntegerExpression);
         this.register(BooleanExpression.class, this::handleBooleanExpression);
+        this.register(ValueDefinitionExpression.class, this::handleValueDefinitionExpression);
         this.register(Program.class, this::handleProgram);
         this.register(ExpressionStatement.class, this::handleExpressionStatement);
         this.register(PrefixExpression.class, this::handlePrefixExpression);
@@ -63,6 +65,14 @@ public class Evaluator {
 
     private Element handleBooleanExpression(BooleanExpression expression, Environment env) throws Exception {
         return BooleanElement.of(expression.isValue());
+    }
+
+    private Element handleValueDefinitionExpression(ValueDefinitionExpression expression, Environment env) throws Exception {
+        String value = expression.getValue();
+        if(NumberUtils.isDigits(value)) {
+            return new IntegerElement(Integer.parseInt(value));
+        }
+        return new TextElement(value);
     }
 
     private Element handleProgram(Program program, Environment env) throws Exception {
@@ -104,43 +114,87 @@ public class Evaluator {
             IntegerElement rightIntegerElement = (IntegerElement) rightResult;
             return new IntegerElement(rightIntegerElement.getValue());
         }
-        throw new EvaluateException(String.format("unsupported prefix \"%s\"", operator));
+        throw new EvaluateException(
+                String.format(
+                        "unsupported prefix \"%s\" [%s](%s)",
+                        operator,
+                        expression.string(),
+                        rightResult.inspect()
+                )
+        );
     }
 
     private Element handleInfixExpression(InfixExpression expression, Environment env) throws Exception {
         Element leftResult = this.eval(expression.getLeft(), env);
         String operator = expression.getOperator();
         Element rightResult = this.eval(expression.getRight(), env);
-        if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
-            IntegerElement leftIntegerElement = (IntegerElement) leftResult;
-            IntegerElement rightIntegerElement = (IntegerElement) rightResult;
-            if("+".equals(operator)) {
+        if("+".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
                 return new IntegerElement(leftIntegerElement.getValue()+rightIntegerElement.getValue());
-            } else if("-".equals(operator)) {
+            } else if(leftResult.type()==Element.Type.TEXT || rightResult.type()==Element.Type.TEXT) {
+                return new TextElement(leftResult.inspect()+rightResult.inspect());
+            }
+        } else if("-".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
                 return new IntegerElement(leftIntegerElement.getValue()-rightIntegerElement.getValue());
-            } else if("*".equals(operator)) {
+            }
+        } else if("*".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
                 return new IntegerElement(leftIntegerElement.getValue()*rightIntegerElement.getValue());
-            } else if("/".equals(operator)) {
+            }
+        } else if("/".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
                 return new IntegerElement(leftIntegerElement.getValue()/rightIntegerElement.getValue());
-            } else if(">".equals(operator)) {
+            }
+        } else if(">".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
                 return BooleanElement.of(leftIntegerElement.getValue()>rightIntegerElement.getValue());
-            } else if("<".equals(operator)) {
+            }
+        } else if("<".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
                 return BooleanElement.of(leftIntegerElement.getValue()<rightIntegerElement.getValue());
-            } else if("==".equals(operator)) {
+            }
+        } else if("==".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
                 return BooleanElement.of(leftIntegerElement.getValue()==rightIntegerElement.getValue());
-            } else if("!=".equals(operator)) {
-                return BooleanElement.of(leftIntegerElement.getValue()!=rightIntegerElement.getValue());
-            }
-            throw new EvaluateException(String.format("unsupported operator \"%s\"", operator));
-        } else if(leftResult.type()==Element.Type.BOOLEAN && rightResult.type()==Element.Type.BOOLEAN) {
-            if("==".equals(operator)) {
+            } else if(leftResult.type()==Element.Type.BOOLEAN && rightResult.type()==Element.Type.BOOLEAN) {
                 return BooleanElement.of(leftResult==rightResult);
-            } else if("!=".equals(operator)) {
-                return BooleanElement.of(leftResult!=rightResult);
+            } else if(leftResult.type()==Element.Type.TEXT && rightResult.type()==Element.Type.TEXT) {
+                return BooleanElement.of(leftResult.inspect().equals(rightResult.inspect()));
             }
-            throw new EvaluateException(String.format("unsupported operator \"%s\"", operator));
+        } else if("!=".equals(operator)) {
+            if(leftResult.type()==Element.Type.INTEGER && rightResult.type()==Element.Type.INTEGER) {
+                IntegerElement leftIntegerElement = (IntegerElement) leftResult;
+                IntegerElement rightIntegerElement = (IntegerElement) rightResult;
+                return BooleanElement.of(leftIntegerElement.getValue()!=rightIntegerElement.getValue());
+            } else if(leftResult.type()==Element.Type.BOOLEAN && rightResult.type()==Element.Type.BOOLEAN) {
+                return BooleanElement.of(leftResult!=rightResult);
+            } else if(leftResult.type()==Element.Type.TEXT && rightResult.type()==Element.Type.TEXT) {
+                return BooleanElement.of(!leftResult.inspect().equals(rightResult.inspect()));
+            }
         }
-        throw new EvaluateException(String.format("invalid expression:\n%s", expression.string()));
+        throw new EvaluateException(
+                String.format(
+                        "unsupported operator \"%s\" [%s](%s,%s)",
+                        operator, expression.string(),
+                        leftResult.inspect(),
+                        rightResult.inspect()
+                )
+        );
     }
 
     private Element handleIfExpression(IfExpression expression, Environment env) throws Exception {
@@ -169,25 +223,17 @@ public class Evaluator {
         if(statementList==null || statementList.size()==0) {
             return VoidElement.INSTANCE;
         }
-        Element result = null;
         for(Statement _statement : statementList) {
-            result = this.eval(_statement, env);
-            if(result == null) {
-                continue;
-            }
-            if(result.type() == Element.Type.VOID) {
-                continue;
-            }
-            if(result.type() == Element.Type.RETURN) {
+            Element result = this.eval(_statement, env);
+            if(_statement.type() == Statement.Type.RETURN) {
                 return result;
             }
         }
-        return result;
+        return VoidElement.INSTANCE;
     }
 
     private Element handleReturnStatement(ReturnStatement statement, Environment env) throws Exception {
-        Element returnResult = this.eval(statement.getValue(), env);
-        return new ReturnElement(returnResult);
+        return this.eval(statement.getValue(), env);
     }
 
     private Element handleLetStatement(LetStatement statement, Environment env) throws Exception {
@@ -230,15 +276,6 @@ public class Evaluator {
                 exEnv.set(parameter.getValue(), argumentResultList.get(p));
             }
         }
-        // TODO 当前处理的是用户自定义的函数，未来需要可以处理monkey自带的函数
-        Element callResult = this.eval(functionElement.getBody(), exEnv);
-        if(callResult == null) {
-            return NullElement.INSTANCE;
-        }
-        if(callResult.type() == Element.Type.RETURN) {
-            ReturnElement returnResult = (ReturnElement) callResult;
-            return returnResult.getValue();
-        }
-        return callResult;
+        return this.eval(functionElement.getBody(), exEnv);
     }
 }

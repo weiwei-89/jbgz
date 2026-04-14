@@ -25,6 +25,11 @@ public class ReturnStatement implements Statement {
     }
 
     @Override
+    public Type type() {
+        return Type.RETURN;
+    }
+
+    @Override
     public void statementNode() {
 
     }

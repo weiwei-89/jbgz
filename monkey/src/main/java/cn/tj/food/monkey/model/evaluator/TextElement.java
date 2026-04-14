@@ -2,24 +2,24 @@ package cn.tj.food.monkey.model.evaluator;
 
 import cn.tj.food.monkey.model.Element;
 
-public class ReturnElement implements Element {
-    private final Element value;
+public class TextElement implements Element {
+    private final String value;
 
-    public ReturnElement(Element value) {
+    public TextElement(String value) {
         this.value = value;
     }
 
-    public Element getValue() {
+    public String getValue() {
         return this.value;
     }
 
     @Override
     public Type type() {
-        return Type.RETURN;
+        return Type.TEXT;
     }
 
     @Override
     public String inspect() {
-        return this.value.inspect();
+        return this.value;
     }
 }

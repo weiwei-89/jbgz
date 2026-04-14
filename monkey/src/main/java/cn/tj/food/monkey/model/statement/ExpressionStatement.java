@@ -25,6 +25,11 @@ public class ExpressionStatement implements Statement {
     }
 
     @Override
+    public Type type() {
+        return Type.COMMON;
+    }
+
+    @Override
     public void statementNode() {
 
     }

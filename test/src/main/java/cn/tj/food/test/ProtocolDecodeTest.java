@@ -39,7 +39,7 @@ public class ProtocolDecodeTest {
         String protocolPath = cmd.getOptionValue(PROTOCOL_PATH);
         String dataPath = cmd.getOptionValue(DATA_PATH);
         String outputPath = cmd.getOptionValue(OUTPUT_PATH);
-        logger.info("loading protocol \"{}\" [{}]", protocolId, protocolPath);
+        logger.info("loading protocol \"{}\"...... [{}]", protocolId, protocolPath);
         Path path = new Path(protocolPath, protocolId);
         Papers papers = ProtocolLoader.build()
                 .setFormat(ProtocolLoader.DEFAULT_FORMAT)
@@ -48,7 +48,7 @@ public class ProtocolDecodeTest {
         cn.tj.food.common.FileReader fileReader = new cn.tj.food.common.FileReader();
         String hex = fileReader.read(dataPath);
         hex = hex.replaceAll(" ", "");
-        logger.info("decoding data [{}]", DATA_PATH);
+        logger.info("decoding data...... [{}]", DATA_PATH);
         ProtocolDecoder decoder = new ProtocolDecoder(papers);
         Info info = decoder.decode(DataUtil.hexToBytes(hex));
         Knife knife = Knife.build();
